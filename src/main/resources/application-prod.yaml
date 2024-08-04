@@ -1,4 +1,5 @@
-data:
-  mongodb:
-    uri: mongodb + srv ://<username>:<pwd>@<cluster>.mongodb.net/<dbname>
+spring:
+  data:
+    mongodb:
+      uri:  ${PAYMENT_MANAGER_DB_URI}
 
