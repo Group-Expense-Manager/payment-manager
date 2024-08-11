@@ -20,7 +20,7 @@ class PaymentService(
     private val paymentRepository: PaymentRepository,
 ) {
 
-    private val expenseCreationValidators = validatorsOf(
+    private val paymentCreationValidators = validatorsOf(
         RecipientValidator(),
         CurrenciesValidator(),
     )
@@ -30,8 +30,8 @@ class PaymentService(
     }
 
     fun createPayment(groupData: GroupData, payment: Payment): Payment {
-        expenseCreationValidators
-            .getFailedValidations(createExpenseCreationDataWrapper(groupData, payment))
+        paymentCreationValidators
+            .getFailedValidations(createPaymentCreationDataWrapper(groupData, payment))
             .takeIf { it.isNotEmpty() }
             ?.also { throw ValidatorsException(it) }
 
@@ -42,7 +42,7 @@ class PaymentService(
         )
     }
 
-    private fun createExpenseCreationDataWrapper(groupData: GroupData, payment: Payment): PaymentCreationDataWrapper {
+    private fun createPaymentCreationDataWrapper(groupData: GroupData, payment: Payment): PaymentCreationDataWrapper {
         return PaymentCreationDataWrapper(
             groupData,
             payment,

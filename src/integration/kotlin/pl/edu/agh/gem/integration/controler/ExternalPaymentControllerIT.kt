@@ -87,9 +87,9 @@ class ExternalPaymentControllerIT(
             Pair(MESSAGE_NULL_OR_NOT_BLANK, createPaymentCreationRequest(message = "")),
             Pair(ATTACHMENT_ID_NOT_BLANK, createPaymentCreationRequest(attachmentId = "")),
 
-        ) { (expectedMessage, expenseCreationRequest) ->
+        ) { (expectedMessage, paymentCreationRequest) ->
             // when
-            val response = service.createPayment(expenseCreationRequest, createGemUser(), GROUP_ID)
+            val response = service.createPayment(paymentCreationRequest, createGemUser(), GROUP_ID)
 
             // then
             response shouldHaveHttpStatus BAD_REQUEST

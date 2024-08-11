@@ -89,14 +89,14 @@ class PaymentServiceTest : ShouldSpec({
             Quadruple(TARGET_CURRENCY_NOT_IN_GROUP_CURRENCIES, createPayment(), arrayOf(CURRENCY_1), arrayOf(CURRENCY_1, CURRENCY_2)),
             Quadruple(BASE_CURRENCY_NOT_AVAILABLE, createPayment(), arrayOf(CURRENCY_1, CURRENCY_2), arrayOf(CURRENCY_2)),
 
-        ) { (expectedMessage, expense, groupCurrencies, availableCurrencies) ->
+        ) { (expectedMessage, payment, groupCurrencies, availableCurrencies) ->
             // given
             val group = createGroup(currencies = createCurrencies(*groupCurrencies))
             whenever(currencyManagerClient.getAvailableCurrencies()).thenReturn(createCurrencies(*availableCurrencies))
             whenever(currencyManagerClient.getExchangeRate(CURRENCY_1, CURRENCY_2, Instant.ofEpochMilli(0L))).thenReturn(createExchangeRate())
 
             // when & then
-            shouldThrowWithMessage<ValidatorsException>("Failed validations: $expectedMessage") { paymentService.createPayment(group, expense) }
+            shouldThrowWithMessage<ValidatorsException>("Failed validations: $expectedMessage") { paymentService.createPayment(group, payment) }
             verify(paymentRepository, times(0)).save(anyVararg(Payment::class))
         }
     }
