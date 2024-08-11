@@ -239,7 +239,7 @@ class ExternalPaymentControllerIT(
         response shouldHaveHttpStatus FORBIDDEN
     }
 
-    should("return not found when expense doesn't exist") {
+    should("return not found when payment doesn't exist") {
         // given
         stubGroupManagerUserGroups(createUserGroupsResponse(GROUP_ID, OTHER_GROUP_ID), USER_ID)
 
