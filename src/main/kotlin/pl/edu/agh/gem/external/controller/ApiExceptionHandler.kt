@@ -25,6 +25,7 @@ import pl.edu.agh.gem.internal.client.RetryableAttachmentStoreClientException
 import pl.edu.agh.gem.internal.client.RetryableCurrencyManagerClientException
 import pl.edu.agh.gem.internal.client.RetryableGroupManagerClientException
 import pl.edu.agh.gem.internal.service.MissingPaymentException
+import pl.edu.agh.gem.internal.service.PaymentDeletionAccessException
 import pl.edu.agh.gem.validator.ValidatorsException
 
 @ControllerAdvice
@@ -99,5 +100,12 @@ class ApiExceptionHandler {
     @ExceptionHandler(MissingPaymentException::class)
     fun handleMissingPaymentException(exception: MissingPaymentException): ResponseEntity<SimpleErrorsHolder> {
         return ResponseEntity(handleError(exception), NOT_FOUND)
+    }
+
+    @ExceptionHandler(PaymentDeletionAccessException::class)
+    fun handlePaymentDeletionAccessException(
+        exception: PaymentDeletionAccessException,
+    ): ResponseEntity<SimpleErrorsHolder> {
+        return ResponseEntity(handleError(exception), FORBIDDEN)
     }
 }

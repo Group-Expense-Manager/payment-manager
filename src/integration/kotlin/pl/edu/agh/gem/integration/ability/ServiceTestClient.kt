@@ -43,4 +43,11 @@ class ServiceTestClient(applicationContext: WebApplicationContext) {
             .bodyValue(body)
             .exchange()
     }
+
+    fun delete(user: GemUser, groupId: String, paymentId: String): ResponseSpec {
+        return webClient.delete()
+            .uri(URI("$EXTERNAL/payments/$paymentId/groups/$groupId"))
+            .headers { it.withValidatedUser(user) }
+            .exchange()
+    }
 }

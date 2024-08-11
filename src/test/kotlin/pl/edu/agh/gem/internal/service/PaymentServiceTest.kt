@@ -24,6 +24,7 @@ import pl.edu.agh.gem.internal.model.attachment.GroupAttachment
 import pl.edu.agh.gem.internal.model.payment.Payment
 import pl.edu.agh.gem.internal.model.payment.PaymentAction.CREATED
 import pl.edu.agh.gem.internal.model.payment.PaymentStatus.PENDING
+import pl.edu.agh.gem.internal.persistence.ArchivedPaymentRepository
 import pl.edu.agh.gem.internal.persistence.PaymentRepository
 import pl.edu.agh.gem.util.DummyData.ANOTHER_USER_ID
 import pl.edu.agh.gem.util.DummyData.ATTACHMENT_ID
@@ -52,12 +53,14 @@ class PaymentServiceTest : ShouldSpec({
     val currencyManagerClient = mock<CurrencyManagerClient> {}
     val attachmentStoreClient = mock<AttachmentStoreClient> {}
     val paymentRepository = mock<PaymentRepository> {}
+    val archivedPaymentRepository = mock<ArchivedPaymentRepository> {}
 
     val paymentService = PaymentService(
         groupManagerClient,
         currencyManagerClient,
         attachmentStoreClient,
         paymentRepository,
+        archivedPaymentRepository,
     )
 
     should("create payment when attachmentId is provided") {
@@ -254,6 +257,44 @@ class PaymentServiceTest : ShouldSpec({
 
         verify(paymentRepository, times(1)).findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)
         verify(paymentRepository, times(0)).save(anyVararg(Payment::class))
+    }
+
+    should("delete payment") {
+        // given
+        val payment = createPayment(id = PAYMENT_ID, groupId = GROUP_ID, creatorId = USER_ID)
+        whenever(paymentRepository.findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)).thenReturn(payment)
+
+        // when
+        paymentService.deletePayment(PAYMENT_ID, GROUP_ID, USER_ID)
+
+        // then
+        verify(paymentRepository, times(1)).findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)
+        verify(paymentRepository, times(1)).delete(payment)
+        verify(archivedPaymentRepository, times(1)).add(payment)
+    }
+
+    should("throw MissingPaymentException when payment does not exist") {
+        // given
+        val payment = createPayment(id = PAYMENT_ID, groupId = GROUP_ID, creatorId = USER_ID)
+        whenever(paymentRepository.findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)).thenReturn(null)
+
+        // when & then
+        shouldThrowExactly<MissingPaymentException> { paymentService.deletePayment(PAYMENT_ID, GROUP_ID, USER_ID) }
+        verify(paymentRepository, times(1)).findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)
+        verify(paymentRepository, times(0)).delete(payment)
+        verify(archivedPaymentRepository, times(0)).add(payment)
+    }
+
+    should("throw PaymentDeletionAccessException when user is not payment Creator") {
+        // given
+        val payment = createPayment(id = PAYMENT_ID, groupId = GROUP_ID, creatorId = OTHER_USER_ID)
+        whenever(paymentRepository.findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)).thenReturn(payment)
+
+        // when & then
+        shouldThrowExactly<PaymentDeletionAccessException> { paymentService.deletePayment(PAYMENT_ID, GROUP_ID, USER_ID) }
+        verify(paymentRepository, times(1)).findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)
+        verify(paymentRepository, times(0)).delete(payment)
+        verify(archivedPaymentRepository, times(0)).add(payment)
     }
 },)
 

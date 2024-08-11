@@ -2,6 +2,7 @@ package pl.edu.agh.gem.integration.controler
 
 import io.kotest.datatest.withData
 import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import org.springframework.http.HttpStatus.BAD_REQUEST
@@ -19,6 +20,7 @@ import pl.edu.agh.gem.external.dto.payment.PaymentResponse
 import pl.edu.agh.gem.external.dto.payment.toAmountDto
 import pl.edu.agh.gem.helper.group.DummyGroup.GROUP_ID
 import pl.edu.agh.gem.helper.group.DummyGroup.OTHER_GROUP_ID
+import pl.edu.agh.gem.helper.user.DummyUser.EMAIL
 import pl.edu.agh.gem.helper.user.DummyUser.OTHER_USER_ID
 import pl.edu.agh.gem.helper.user.DummyUser.USER_ID
 import pl.edu.agh.gem.helper.user.createGemUser
@@ -31,6 +33,7 @@ import pl.edu.agh.gem.integration.ability.stubGroupManagerGroupData
 import pl.edu.agh.gem.integration.ability.stubGroupManagerUserGroups
 import pl.edu.agh.gem.internal.persistence.PaymentRepository
 import pl.edu.agh.gem.internal.service.MissingPaymentException
+import pl.edu.agh.gem.internal.service.PaymentDeletionAccessException
 import pl.edu.agh.gem.internal.service.Quadruple
 import pl.edu.agh.gem.util.DummyData.ANOTHER_USER_ID
 import pl.edu.agh.gem.util.DummyData.CURRENCY_1
@@ -336,5 +339,67 @@ class ExternalPaymentControllerIT(
         // then
         response shouldHaveHttpStatus BAD_REQUEST
         response shouldHaveValidatorError USER_NOT_RECIPIENT
+    }
+
+    should("delete payment") {
+        // given
+        val payment = createPayment(id = PAYMENT_ID, groupId = GROUP_ID, creatorId = USER_ID)
+        paymentRepository.save(payment)
+        stubGroupManagerUserGroups(createUserGroupsResponse(GROUP_ID, OTHER_GROUP_ID), USER_ID)
+
+        // when
+        val response = service.delete(createGemUser(USER_ID, EMAIL), GROUP_ID, PAYMENT_ID)
+
+        // then
+        response shouldHaveHttpStatus OK
+        paymentRepository.findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID).also {
+            it.shouldBeNull()
+        }
+    }
+    should("return forbidden if user is not a group member") {
+        // given
+        stubGroupManagerUserGroups(createUserGroupsResponse(OTHER_GROUP_ID), USER_ID)
+
+        // when
+        val response = service.delete(createGemUser(USER_ID, EMAIL), GROUP_ID, PAYMENT_ID)
+
+        // then
+        response shouldHaveHttpStatus FORBIDDEN
+        response shouldHaveErrors {
+            errors shouldHaveSize 1
+            errors.first().code shouldBe UserWithoutGroupAccessException::class.simpleName
+        }
+    }
+
+    should("return not found when payment is not present") {
+        // given
+        stubGroupManagerUserGroups(createUserGroupsResponse(GROUP_ID, OTHER_GROUP_ID), USER_ID)
+
+        // when
+        val response = service.delete(createGemUser(USER_ID, EMAIL), GROUP_ID, PAYMENT_ID)
+
+        // then
+        response shouldHaveHttpStatus NOT_FOUND
+        response shouldHaveErrors {
+            errors shouldHaveSize 1
+            errors.first().code shouldBe MissingPaymentException::class.simpleName
+        }
+    }
+
+    should("return forbidden when user is not payment creator") {
+        // given
+        val payment = createPayment(id = PAYMENT_ID, groupId = GROUP_ID, creatorId = OTHER_USER_ID)
+        paymentRepository.save(payment)
+        stubGroupManagerUserGroups(createUserGroupsResponse(GROUP_ID, OTHER_GROUP_ID), USER_ID)
+
+        // when
+        val response = service.delete(createGemUser(USER_ID, EMAIL), GROUP_ID, PAYMENT_ID)
+
+        // then
+        response shouldHaveHttpStatus FORBIDDEN
+        response shouldHaveErrors {
+            errors shouldHaveSize 1
+            errors.first().code shouldBe PaymentDeletionAccessException::class.simpleName
+        }
     }
 },)
