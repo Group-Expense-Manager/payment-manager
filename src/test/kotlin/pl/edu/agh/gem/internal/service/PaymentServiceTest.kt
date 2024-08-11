@@ -15,6 +15,7 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import pl.edu.agh.gem.helper.group.DummyGroup.GROUP_ID
+import pl.edu.agh.gem.helper.user.DummyUser.OTHER_USER_ID
 import pl.edu.agh.gem.helper.user.DummyUser.USER_ID
 import pl.edu.agh.gem.internal.client.AttachmentStoreClient
 import pl.edu.agh.gem.internal.client.CurrencyManagerClient
@@ -35,6 +36,7 @@ import pl.edu.agh.gem.util.createExchangeRate
 import pl.edu.agh.gem.util.createGroup
 import pl.edu.agh.gem.util.createPayment
 import pl.edu.agh.gem.util.createPaymentCreation
+import pl.edu.agh.gem.util.createPaymentDecision
 import pl.edu.agh.gem.validation.ValidationMessage.BASE_CURRENCY_EQUAL_TO_TARGET_CURRENCY
 import pl.edu.agh.gem.validation.ValidationMessage.BASE_CURRENCY_NOT_AVAILABLE
 import pl.edu.agh.gem.validation.ValidationMessage.BASE_CURRENCY_NOT_IN_GROUP_CURRENCIES
@@ -210,6 +212,44 @@ class PaymentServiceTest : ShouldSpec({
         // when & then
         shouldThrowExactly<MissingPaymentException> { paymentService.getPayment(PAYMENT_ID, GROUP_ID) }
         verify(paymentRepository, times(1)).findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)
+    }
+
+    should("decide") {
+        // given
+        val payment = createPayment()
+        whenever(paymentRepository.findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)).thenReturn(payment)
+
+        val paymentDecision = createPaymentDecision(userId = OTHER_USER_ID)
+
+        // when
+        paymentService.decide(paymentDecision)
+
+        // then
+        verify(paymentRepository, times(1)).findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)
+        verify(paymentRepository, times(1)).save(anyVararg(Payment::class))
+    }
+
+    should("throw MissingPaymentException when payment is not present") {
+        // given
+        whenever(paymentRepository.findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)).thenReturn(null)
+        val paymentDecision = createPaymentDecision()
+
+        // when & then
+        shouldThrowExactly<MissingPaymentException> { paymentService.decide(paymentDecision) }
+        verify(paymentRepository, times(1)).findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)
+        verify(paymentRepository, times(0)).save(anyVararg(Payment::class))
+    }
+
+    should("throw PaymentRecipientDecisionException when payment is not present") {
+        // given
+        val payment = createPayment()
+        whenever(paymentRepository.findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)).thenReturn(payment)
+        val paymentDecision = createPaymentDecision(userId = USER_ID)
+
+        // when & then
+        shouldThrowExactly<PaymentRecipientDecisionException> { paymentService.decide(paymentDecision) }
+        verify(paymentRepository, times(1)).findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)
+        verify(paymentRepository, times(0)).save(anyVararg(Payment::class))
     }
 },)
 

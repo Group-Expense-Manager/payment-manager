@@ -1,6 +1,7 @@
 package pl.edu.agh.gem.integration.controler
 
 import io.kotest.datatest.withData
+import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import org.springframework.http.HttpStatus.BAD_REQUEST
@@ -9,9 +10,11 @@ import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.http.HttpStatus.OK
 import pl.edu.agh.gem.assertion.shouldBody
+import pl.edu.agh.gem.assertion.shouldHaveErrors
 import pl.edu.agh.gem.assertion.shouldHaveHttpStatus
 import pl.edu.agh.gem.assertion.shouldHaveValidationError
 import pl.edu.agh.gem.assertion.shouldHaveValidatorError
+import pl.edu.agh.gem.exception.UserWithoutGroupAccessException
 import pl.edu.agh.gem.external.dto.payment.PaymentResponse
 import pl.edu.agh.gem.external.dto.payment.toAmountDto
 import pl.edu.agh.gem.helper.group.DummyGroup.GROUP_ID
@@ -27,6 +30,8 @@ import pl.edu.agh.gem.integration.ability.stubCurrencyManagerExchangeRate
 import pl.edu.agh.gem.integration.ability.stubGroupManagerGroupData
 import pl.edu.agh.gem.integration.ability.stubGroupManagerUserGroups
 import pl.edu.agh.gem.internal.persistence.PaymentRepository
+import pl.edu.agh.gem.internal.service.MissingPaymentException
+import pl.edu.agh.gem.internal.service.PaymentRecipientDecisionException
 import pl.edu.agh.gem.internal.service.Quadruple
 import pl.edu.agh.gem.util.DummyData.ANOTHER_USER_ID
 import pl.edu.agh.gem.util.DummyData.CURRENCY_1
@@ -42,6 +47,7 @@ import pl.edu.agh.gem.util.createGroupResponse
 import pl.edu.agh.gem.util.createMembersDTO
 import pl.edu.agh.gem.util.createPayment
 import pl.edu.agh.gem.util.createPaymentCreationRequest
+import pl.edu.agh.gem.util.createPaymentDecisionRequest
 import pl.edu.agh.gem.util.createUserGroupsResponse
 import pl.edu.agh.gem.validation.ValidationMessage.ATTACHMENT_ID_NULL_OR_NOT_BLANK
 import pl.edu.agh.gem.validation.ValidationMessage.BASE_CURRENCY_EQUAL_TO_TARGET_CURRENCY
@@ -49,7 +55,9 @@ import pl.edu.agh.gem.validation.ValidationMessage.BASE_CURRENCY_NOT_AVAILABLE
 import pl.edu.agh.gem.validation.ValidationMessage.BASE_CURRENCY_NOT_BLANK
 import pl.edu.agh.gem.validation.ValidationMessage.BASE_CURRENCY_NOT_IN_GROUP_CURRENCIES
 import pl.edu.agh.gem.validation.ValidationMessage.BASE_CURRENCY_PATTERN
+import pl.edu.agh.gem.validation.ValidationMessage.GROUP_ID_NOT_BLANK
 import pl.edu.agh.gem.validation.ValidationMessage.MESSAGE_NULL_OR_NOT_BLANK
+import pl.edu.agh.gem.validation.ValidationMessage.PAYMENT_ID_NOT_BLANK
 import pl.edu.agh.gem.validation.ValidationMessage.POSITIVE_AMOUNT
 import pl.edu.agh.gem.validation.ValidationMessage.RECIPIENT_ID_NOT_BLANK
 import pl.edu.agh.gem.validation.ValidationMessage.RECIPIENT_IS_CREATOR
@@ -248,5 +256,88 @@ class ExternalPaymentControllerIT(
 
         // then
         response shouldHaveHttpStatus NOT_FOUND
+    }
+
+    should("decide") {
+        // given
+        val decisionRequest = createPaymentDecisionRequest()
+        stubGroupManagerUserGroups(createUserGroupsResponse(GROUP_ID, OTHER_GROUP_ID), OTHER_USER_ID)
+
+        val payment = createPayment()
+        paymentRepository.save(payment)
+
+        // when
+        val response = service.decide(decisionRequest, createGemUser(id = OTHER_USER_ID))
+
+        // then
+        response shouldHaveHttpStatus OK
+    }
+
+    context("return validation exception when decide cause:") {
+        withData(
+            nameFn = { it.first },
+            Pair(PAYMENT_ID_NOT_BLANK, createPaymentDecisionRequest(paymentId = "")),
+            Pair(GROUP_ID_NOT_BLANK, createPaymentDecisionRequest(groupId = "")),
+            Pair(MESSAGE_NULL_OR_NOT_BLANK, createPaymentDecisionRequest(message = "")),
+
+        ) { (expectedMessage, paymentDecisionRequest) ->
+            // when
+            val response = service.decide(paymentDecisionRequest, createGemUser())
+
+            // then
+            response shouldHaveHttpStatus BAD_REQUEST
+            response shouldHaveValidationError expectedMessage
+        }
+    }
+
+    should("return forbidden if user is not a group member") {
+        // given
+        val decisionRequest = createPaymentDecisionRequest()
+        stubGroupManagerUserGroups(createUserGroupsResponse(OTHER_GROUP_ID), USER_ID)
+
+        // when
+        val response = service.decide(decisionRequest, createGemUser(id = USER_ID))
+
+        // then
+        response shouldHaveHttpStatus FORBIDDEN
+        response shouldHaveErrors {
+            errors shouldHaveSize 1
+            errors.first().code shouldBe UserWithoutGroupAccessException::class.simpleName
+        }
+    }
+
+    should("return not found when payment is not present") {
+        // given
+        val decisionRequest = createPaymentDecisionRequest()
+        stubGroupManagerUserGroups(createUserGroupsResponse(GROUP_ID, OTHER_GROUP_ID), USER_ID)
+
+        // when
+        val response = service.decide(decisionRequest, createGemUser(id = USER_ID))
+
+        // then
+        response shouldHaveHttpStatus NOT_FOUND
+        response shouldHaveErrors {
+            errors shouldHaveSize 1
+            errors.first().code shouldBe MissingPaymentException::class.simpleName
+        }
+    }
+
+    should("return forbidden if user is not an payment recipient") {
+        // given
+        val decisionRequest = createPaymentDecisionRequest()
+        stubGroupManagerUserGroups(createUserGroupsResponse(GROUP_ID, OTHER_GROUP_ID), USER_ID)
+
+        val payment = createPayment()
+        paymentRepository.save(payment)
+
+        // when
+        val response = service.decide(decisionRequest, createGemUser(id = USER_ID))
+
+        // then
+        response shouldHaveHttpStatus FORBIDDEN
+        response shouldHaveErrors {
+            errors shouldHaveSize 1
+            errors.first().code shouldBe PaymentRecipientDecisionException::class.simpleName
+        }
     }
 },)
