@@ -7,18 +7,25 @@ import pl.edu.agh.gem.internal.client.GroupManagerClient
 import pl.edu.agh.gem.internal.model.group.GroupData
 import pl.edu.agh.gem.internal.model.payment.FxData
 import pl.edu.agh.gem.internal.model.payment.Payment
+import pl.edu.agh.gem.internal.model.payment.PaymentAction.EDITED
 import pl.edu.agh.gem.internal.model.payment.PaymentCreation
 import pl.edu.agh.gem.internal.model.payment.PaymentDecision
 import pl.edu.agh.gem.internal.model.payment.PaymentHistoryEntry
+import pl.edu.agh.gem.internal.model.payment.PaymentStatus.PENDING
+import pl.edu.agh.gem.internal.model.payment.PaymentUpdate
 import pl.edu.agh.gem.internal.persistence.ArchivedPaymentRepository
 import pl.edu.agh.gem.internal.persistence.PaymentRepository
-import pl.edu.agh.gem.validation.creation.CurrenciesValidator
+import pl.edu.agh.gem.validation.CurrenciesValidator
+import pl.edu.agh.gem.validation.CurrencyData
 import pl.edu.agh.gem.validation.creation.PaymentCreationDataWrapper
 import pl.edu.agh.gem.validation.creation.RecipientValidator
-import pl.edu.agh.gem.validation.decision.DecisionDataWrapper
 import pl.edu.agh.gem.validation.decision.DecisionValidator
-import pl.edu.agh.gem.validator.ValidatorList.Companion.validatorsOf
+import pl.edu.agh.gem.validation.decision.PaymentDecisionDataWrapper
+import pl.edu.agh.gem.validation.update.PaymentUpdateDataWrapper
 import pl.edu.agh.gem.validator.ValidatorsException
+import pl.edu.agh.gem.validator.alsoValidate
+import pl.edu.agh.gem.validator.validate
+import java.math.BigDecimal
 import java.time.Instant
 import java.time.Instant.now
 
@@ -31,22 +38,18 @@ class PaymentService(
     private val archivedPaymentRepository: ArchivedPaymentRepository,
 ) {
 
-    private val paymentCreationValidators = validatorsOf(
-        RecipientValidator(),
-        CurrenciesValidator(),
-    )
-
-    private val paymentDecisionValidators = validatorsOf(
-        DecisionValidator(),
-    )
+    val recipientValidator = RecipientValidator()
+    val currenciesValidator = CurrenciesValidator()
+    val decisionValidator = DecisionValidator()
 
     fun getGroup(groupId: String): GroupData {
         return groupManagerClient.getGroup(groupId)
     }
 
     fun createPayment(groupData: GroupData, paymentCreation: PaymentCreation): Payment {
-        paymentCreationValidators
-            .getFailedValidations(createPaymentCreationDataWrapper(groupData, paymentCreation))
+        val dataWrapper = createPaymentCreationDataWrapper(groupData, paymentCreation)
+        validate(dataWrapper, recipientValidator)
+            .alsoValidate(dataWrapper, currenciesValidator)
             .takeIf { it.isNotEmpty() }
             ?.also { throw ValidatorsException(it) }
 
@@ -63,9 +66,14 @@ class PaymentService(
 
     private fun createPaymentCreationDataWrapper(groupData: GroupData, paymentCreation: PaymentCreation): PaymentCreationDataWrapper {
         return PaymentCreationDataWrapper(
-            groupData,
+            groupData.members,
             paymentCreation,
-            currencyManagerClient.getAvailableCurrencies(),
+            CurrencyData(
+                groupData.currencies,
+                currencyManagerClient.getAvailableCurrencies(),
+                paymentCreation.amount.currency,
+                paymentCreation.targetCurrency,
+            ),
         )
     }
 
@@ -84,8 +92,8 @@ class PaymentService(
         val payment = paymentRepository.findByPaymentIdAndGroupId(paymentDecision.paymentId, paymentDecision.groupId)
             ?: throw MissingPaymentException(paymentDecision.paymentId, paymentDecision.groupId)
 
-        paymentDecisionValidators
-            .getFailedValidations(DecisionDataWrapper(paymentDecision, payment))
+        val dataWrapper = PaymentDecisionDataWrapper(paymentDecision, payment)
+        validate(dataWrapper, decisionValidator)
             .takeIf { it.isNotEmpty() }
             ?.also { throw ValidatorsException(it) }
 
@@ -119,6 +127,71 @@ class PaymentService(
     }
 
     private fun String.isCreator(payment: Payment) = payment.creatorId == this
+
+    fun updatePayment(groupData: GroupData, update: PaymentUpdate): Payment {
+        val originalPayment = paymentRepository.findByPaymentIdAndGroupId(update.id, update.groupId)
+            ?: throw MissingPaymentException(update.id, update.groupId)
+
+        if (!update.userId.isCreator(originalPayment)) {
+            throw PaymentUpdateAccessException(update.userId, update.id)
+        }
+
+        if (!update.modifies(originalPayment)) {
+            throw NoPaymentUpdateException(update.userId, update.id)
+        }
+
+        val partiallyUpdatedPayment = originalPayment.update(update)
+
+        val dataWrapper = PaymentUpdateDataWrapper(
+            CurrencyData(
+                groupData.currencies,
+                currencyManagerClient.getAvailableCurrencies(),
+                update.amount.currency,
+                update.targetCurrency,
+            ),
+        )
+
+        validate(dataWrapper, currenciesValidator)
+            .takeIf { it.isNotEmpty() }
+            ?.also { throw ValidatorsException(it) }
+
+        return paymentRepository.save(
+            partiallyUpdatedPayment.copy(
+                fxData = getFxData(
+                    update.amount.currency,
+                    update.targetCurrency,
+                    update.date,
+                ),
+            ),
+        )
+    }
+
+    private fun PaymentUpdate.modifies(payment: Payment): Boolean {
+        return payment.title != title ||
+            payment.type != type ||
+            payment.amount != amount ||
+            payment.fxData?.targetCurrency != targetCurrency ||
+            payment.date != date
+    }
+
+    private fun Payment.update(paymentUpdate: PaymentUpdate): Payment {
+        return this.copy(
+            title = paymentUpdate.title,
+            type = paymentUpdate.type,
+            amount = paymentUpdate.amount,
+            fxData = paymentUpdate.targetCurrency?.let {
+                FxData(
+                    paymentUpdate.targetCurrency,
+                    BigDecimal.ZERO,
+                )
+            },
+            date = paymentUpdate.date,
+            updatedAt = now(),
+            status = PENDING,
+            history = history + PaymentHistoryEntry(creatorId, EDITED, now(), paymentUpdate.message),
+
+        )
+    }
 }
 
 class MissingPaymentException(paymentId: String, groupId: String) :
@@ -126,3 +199,9 @@ class MissingPaymentException(paymentId: String, groupId: String) :
 
 class PaymentDeletionAccessException(userId: String, paymentId: String) :
     RuntimeException("User with id: $userId can not delete payment with id: $paymentId")
+
+class PaymentUpdateAccessException(userId: String, paymentId: String) :
+    RuntimeException("User with id: $userId can not update payment with id: $paymentId")
+
+class NoPaymentUpdateException(userId: String, paymentId: String) :
+    RuntimeException("No update occurred for payment with id: $paymentId by user with id: $userId")

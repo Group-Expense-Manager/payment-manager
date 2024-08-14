@@ -4,17 +4,20 @@ import io.kotest.assertions.throwables.shouldThrowExactly
 import io.kotest.assertions.throwables.shouldThrowWithMessage
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.datatest.withData
+import io.kotest.matchers.collections.shouldContainAll
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyVararg
+import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import pl.edu.agh.gem.helper.group.DummyGroup.GROUP_ID
+import pl.edu.agh.gem.helper.group.createGroupMembers
 import pl.edu.agh.gem.helper.user.DummyUser.OTHER_USER_ID
 import pl.edu.agh.gem.helper.user.DummyUser.USER_ID
 import pl.edu.agh.gem.internal.client.AttachmentStoreClient
@@ -23,6 +26,7 @@ import pl.edu.agh.gem.internal.client.GroupManagerClient
 import pl.edu.agh.gem.internal.model.attachment.GroupAttachment
 import pl.edu.agh.gem.internal.model.payment.Payment
 import pl.edu.agh.gem.internal.model.payment.PaymentAction.CREATED
+import pl.edu.agh.gem.internal.model.payment.PaymentAction.EDITED
 import pl.edu.agh.gem.internal.model.payment.PaymentStatus.PENDING
 import pl.edu.agh.gem.internal.persistence.ArchivedPaymentRepository
 import pl.edu.agh.gem.internal.persistence.PaymentRepository
@@ -30,6 +34,7 @@ import pl.edu.agh.gem.util.DummyData.ANOTHER_USER_ID
 import pl.edu.agh.gem.util.DummyData.ATTACHMENT_ID
 import pl.edu.agh.gem.util.DummyData.CURRENCY_1
 import pl.edu.agh.gem.util.DummyData.CURRENCY_2
+import pl.edu.agh.gem.util.DummyData.EXCHANGE_RATE_VALUE
 import pl.edu.agh.gem.util.DummyData.PAYMENT_ID
 import pl.edu.agh.gem.util.createAmount
 import pl.edu.agh.gem.util.createCurrencies
@@ -38,6 +43,8 @@ import pl.edu.agh.gem.util.createGroup
 import pl.edu.agh.gem.util.createPayment
 import pl.edu.agh.gem.util.createPaymentCreation
 import pl.edu.agh.gem.util.createPaymentDecision
+import pl.edu.agh.gem.util.createPaymentUpdate
+import pl.edu.agh.gem.util.createPaymentUpdateFromPayment
 import pl.edu.agh.gem.validation.ValidationMessage.BASE_CURRENCY_EQUAL_TO_TARGET_CURRENCY
 import pl.edu.agh.gem.validation.ValidationMessage.BASE_CURRENCY_NOT_AVAILABLE
 import pl.edu.agh.gem.validation.ValidationMessage.BASE_CURRENCY_NOT_IN_GROUP_CURRENCIES
@@ -46,6 +53,7 @@ import pl.edu.agh.gem.validation.ValidationMessage.RECIPIENT_NOT_GROUP_MEMBER
 import pl.edu.agh.gem.validation.ValidationMessage.TARGET_CURRENCY_NOT_IN_GROUP_CURRENCIES
 import pl.edu.agh.gem.validation.ValidationMessage.USER_NOT_RECIPIENT
 import pl.edu.agh.gem.validator.ValidatorsException
+import java.math.BigDecimal
 import java.time.Instant
 
 class PaymentServiceTest : ShouldSpec({
@@ -295,6 +303,125 @@ class PaymentServiceTest : ShouldSpec({
         verify(paymentRepository, times(1)).findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)
         verify(paymentRepository, times(0)).delete(payment)
         verify(archivedPaymentRepository, times(0)).add(payment)
+    }
+
+    should("update payment") {
+        // given
+        val payment = createPayment(id = PAYMENT_ID, groupId = GROUP_ID, creatorId = USER_ID)
+        val paymentUpdate = createPaymentUpdate(amount = createAmount(value = BigDecimal(6)))
+
+        val exchangeRate = createExchangeRate(EXCHANGE_RATE_VALUE)
+        val group = createGroup(createGroupMembers(USER_ID, OTHER_USER_ID, ANOTHER_USER_ID), currencies = createCurrencies(CURRENCY_1, CURRENCY_2))
+        whenever(paymentRepository.findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)).thenReturn(payment)
+        whenever(currencyManagerClient.getExchangeRate(eq(CURRENCY_1), eq(CURRENCY_2), any())).thenReturn(exchangeRate)
+        whenever(currencyManagerClient.getAvailableCurrencies()).thenReturn(createCurrencies(CURRENCY_1, CURRENCY_2))
+        whenever(paymentRepository.save(anyVararg(Payment::class))).doAnswer { it.arguments[0] as? Payment }
+
+        // when & then
+        val result = paymentService.updatePayment(group, paymentUpdate)
+        verify(paymentRepository, times(1)).findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)
+        verify(currencyManagerClient, times(1)).getAvailableCurrencies()
+        verify(paymentRepository, times(1)).save(anyVararg(Payment::class))
+
+        result.also {
+            it.id shouldBe PAYMENT_ID
+            it.groupId shouldBe GROUP_ID
+            it.creatorId shouldBe USER_ID
+            it.title shouldBe paymentUpdate.title
+            it.type shouldBe paymentUpdate.type
+            it.amount shouldBe paymentUpdate.amount
+            it.fxData.also { fxData ->
+                fxData?.targetCurrency shouldBe paymentUpdate.targetCurrency
+                fxData?.exchangeRate shouldBe exchangeRate.value
+            }
+            it.date shouldBe paymentUpdate.date
+            it.createdAt shouldBe payment.createdAt
+            it.updatedAt.shouldNotBeNull()
+            it.attachmentId shouldBe payment.attachmentId
+            it.recipientId shouldBe payment.recipientId
+            it.status shouldBe PENDING
+            it.history shouldContainAll payment.history
+            it.history.last().also { history ->
+                history.participantId shouldBe USER_ID
+                history.createdAt.shouldNotBeNull()
+                history.paymentAction shouldBe EDITED
+                history.comment shouldBe paymentUpdate.message
+            }
+        }
+    }
+
+    should("throw MissingPaymentException when updating payment and payment does not exist") {
+        // given
+        val paymentUpdate = createPaymentUpdate(id = PAYMENT_ID, groupId = GROUP_ID, userId = USER_ID)
+        val group = createGroup(currencies = createCurrencies(CURRENCY_1, CURRENCY_2))
+
+        whenever(paymentRepository.findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)).thenReturn(null)
+
+        // when & then
+        shouldThrowExactly<MissingPaymentException> { paymentService.updatePayment(group, paymentUpdate) }
+        verify(paymentRepository, times(1)).findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)
+        verify(paymentRepository, times(0)).save(anyVararg(Payment::class))
+    }
+
+    should("throw PaymentUpdateAccessException when updating payment and user is not payment Creator") {
+        // given
+        val payment = createPayment(id = PAYMENT_ID, groupId = GROUP_ID, creatorId = OTHER_USER_ID)
+        val paymentUpdate = createPaymentUpdate(id = PAYMENT_ID, groupId = GROUP_ID, userId = USER_ID)
+        val group = createGroup(currencies = createCurrencies(CURRENCY_1, CURRENCY_2))
+
+        whenever(paymentRepository.findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)).thenReturn(payment)
+
+        // when & then
+        shouldThrowExactly<PaymentUpdateAccessException> { paymentService.updatePayment(group, paymentUpdate) }
+        verify(paymentRepository, times(1)).findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)
+        verify(paymentRepository, times(0)).save(anyVararg(Payment::class))
+    }
+
+    context("throw ValidatorsException when updating exception cause:") {
+        withData(
+            nameFn = { it.first },
+
+            Quadruple(
+                BASE_CURRENCY_NOT_IN_GROUP_CURRENCIES,
+                createPaymentUpdate(targetCurrency = null),
+                arrayOf(),
+                arrayOf(CURRENCY_1, CURRENCY_2),
+            ),
+            Quadruple(
+                BASE_CURRENCY_EQUAL_TO_TARGET_CURRENCY,
+                createPaymentUpdate(amount = createAmount(currency = CURRENCY_1), targetCurrency = CURRENCY_1),
+                arrayOf(CURRENCY_1, CURRENCY_2),
+                arrayOf(CURRENCY_1, CURRENCY_2),
+            ),
+            Quadruple(TARGET_CURRENCY_NOT_IN_GROUP_CURRENCIES, createPaymentUpdate(), arrayOf(CURRENCY_1), arrayOf(CURRENCY_1, CURRENCY_2)),
+            Quadruple(BASE_CURRENCY_NOT_AVAILABLE, createPaymentUpdate(), arrayOf(CURRENCY_1, CURRENCY_2), arrayOf(CURRENCY_2)),
+
+        ) { (expectedMessage, paymentUpdate, groupCurrencies, availableCurrencies) ->
+            // given
+            val payment = createPayment(id = PAYMENT_ID, groupId = GROUP_ID, creatorId = USER_ID)
+            val group = createGroup(createGroupMembers(USER_ID, OTHER_USER_ID, ANOTHER_USER_ID), currencies = createCurrencies(*groupCurrencies))
+            whenever(currencyManagerClient.getAvailableCurrencies()).thenReturn(createCurrencies(*availableCurrencies))
+            whenever(currencyManagerClient.getExchangeRate(CURRENCY_1, CURRENCY_2, Instant.ofEpochMilli(0L))).thenReturn(createExchangeRate())
+            whenever(paymentRepository.findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)).thenReturn(payment)
+
+            // when & then
+            shouldThrowWithMessage<ValidatorsException>("Failed validations: $expectedMessage") { paymentService.updatePayment(group, paymentUpdate) }
+            verify(paymentRepository, times(0)).save(anyVararg(Payment::class))
+        }
+    }
+
+    should("throw NoPaymentUpdateException when updating payment and update doesn't change anything") {
+        // given
+        val payment = createPayment(id = PAYMENT_ID, groupId = GROUP_ID, creatorId = USER_ID)
+        val paymentUpdate = createPaymentUpdateFromPayment(payment)
+        val group = createGroup(currencies = createCurrencies(CURRENCY_1, CURRENCY_2))
+
+        whenever(paymentRepository.findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)).thenReturn(payment)
+
+        // when & then
+        shouldThrowExactly<NoPaymentUpdateException> { paymentService.updatePayment(group, paymentUpdate) }
+        verify(paymentRepository, times(1)).findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)
+        verify(paymentRepository, times(0)).save(anyVararg(Payment::class))
     }
 },)
 

@@ -16,7 +16,7 @@ class RecipientValidator : BaseValidator<PaymentCreationDataWrapper>() {
     }
 
     private fun validateIfRecipientIsGroupMember(paymentCreationDataWrapper: PaymentCreationDataWrapper): Boolean {
-        val membersIds = paymentCreationDataWrapper.groupData.members.members.map { it.id }
+        val membersIds = paymentCreationDataWrapper.groupMembers.members.map { it.id }
         return paymentCreationDataWrapper.paymentCreation.recipientId in membersIds
     }
 }

@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
@@ -17,7 +18,10 @@ import pl.edu.agh.gem.external.dto.payment.PaymentCreationRequest
 import pl.edu.agh.gem.external.dto.payment.PaymentCreationResponse
 import pl.edu.agh.gem.external.dto.payment.PaymentDecisionRequest
 import pl.edu.agh.gem.external.dto.payment.PaymentResponse
+import pl.edu.agh.gem.external.dto.payment.PaymentUpdateRequest
+import pl.edu.agh.gem.external.dto.payment.PaymentUpdateResponse
 import pl.edu.agh.gem.external.dto.payment.toPaymentResponse
+import pl.edu.agh.gem.external.dto.payment.toPaymentUpdateResponse
 import pl.edu.agh.gem.internal.client.GroupManagerClient
 import pl.edu.agh.gem.internal.service.PaymentService
 import pl.edu.agh.gem.media.InternalApiMediaType.APPLICATION_JSON_INTERNAL_VER_1
@@ -80,6 +84,20 @@ class ExternalPaymentController(
     ) {
         userId.checkIfUserHaveAccess(groupId)
         paymentService.deletePayment(paymentId, groupId, userId)
+    }
+
+    @PutMapping("{paymentId}/groups/{groupId}", consumes = [APPLICATION_JSON_INTERNAL_VER_1], produces = [APPLICATION_JSON_INTERNAL_VER_1])
+    @ResponseStatus(OK)
+    fun updatePayment(
+        @GemUserId userId: String,
+        @PathVariable paymentId: String,
+        @PathVariable groupId: String,
+        @Valid @RequestBody
+        paymentUpdateRequest: PaymentUpdateRequest,
+    ): PaymentUpdateResponse {
+        val group = paymentService.getGroup(groupId)
+        userId.checkIfUserHaveAccess(group.members)
+        return paymentService.updatePayment(group, paymentUpdateRequest.toDomain(paymentId, groupId, userId)).toPaymentUpdateResponse()
     }
 
     private fun String.checkIfUserHaveAccess(groupMembers: GroupMembers) {

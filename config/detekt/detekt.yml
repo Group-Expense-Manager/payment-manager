@@ -166,7 +166,7 @@ complexity:
     ignoreStringsRegex: '$^'
   TooManyFunctions:
     active: true
-    excludes: ['**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/androidUnitTest/**', '**/androidInstrumentedTest/**', '**/jsTest/**', '**/iosTest/**', '**/ApiExceptionHandler.kt']
+    excludes: ['**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/androidUnitTest/**', '**/androidInstrumentedTest/**', '**/jsTest/**', '**/iosTest/**', '**/ApiExceptionHandler.kt', '**/PaymentService.kt']
     thresholdInFiles: 11
     thresholdInClasses: 11
     thresholdInInterfaces: 11
@@ -692,7 +692,7 @@ style:
     ignoredCharacters: []
   ThrowsCount:
     active: true
-    max: 2
+    max: 4
     excludeGuardClauses: false
   TrailingWhitespace:
     active: false
