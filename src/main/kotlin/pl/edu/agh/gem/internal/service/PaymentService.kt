@@ -14,6 +14,8 @@ import pl.edu.agh.gem.internal.persistence.PaymentRepository
 import pl.edu.agh.gem.validation.creation.CurrenciesValidator
 import pl.edu.agh.gem.validation.creation.PaymentCreationDataWrapper
 import pl.edu.agh.gem.validation.creation.RecipientValidator
+import pl.edu.agh.gem.validation.decision.DecisionDataWrapper
+import pl.edu.agh.gem.validation.decision.DecisionValidator
 import pl.edu.agh.gem.validator.ValidatorList.Companion.validatorsOf
 import pl.edu.agh.gem.validator.ValidatorsException
 import java.time.Instant
@@ -30,6 +32,10 @@ class PaymentService(
     private val paymentCreationValidators = validatorsOf(
         RecipientValidator(),
         CurrenciesValidator(),
+    )
+
+    private val paymentDecisionValidators = validatorsOf(
+        DecisionValidator(),
     )
 
     fun getGroup(groupId: String): GroupData {
@@ -76,9 +82,10 @@ class PaymentService(
         val payment = paymentRepository.findByPaymentIdAndGroupId(paymentDecision.paymentId, paymentDecision.groupId)
             ?: throw MissingPaymentException(paymentDecision.paymentId, paymentDecision.groupId)
 
-        if (payment.recipientId != paymentDecision.userId) {
-            throw PaymentRecipientDecisionException(paymentDecision.paymentId, paymentDecision.userId)
-        }
+        paymentDecisionValidators
+            .getFailedValidations(DecisionDataWrapper(paymentDecision, payment))
+            .takeIf { it.isNotEmpty() }
+            ?.also { throw ValidatorsException(it) }
 
         paymentRepository.save(payment.addDecision(paymentDecision))
     }
@@ -101,6 +108,3 @@ class PaymentService(
 
 class MissingPaymentException(paymentId: String, groupId: String) :
     RuntimeException("Failed to find payment with id: $paymentId and groupId: $groupId")
-
-class PaymentRecipientDecisionException(paymentId: String, userId: String) :
-    RuntimeException("User with id: $userId is not recipient of payment with id: $paymentId and can not decide")

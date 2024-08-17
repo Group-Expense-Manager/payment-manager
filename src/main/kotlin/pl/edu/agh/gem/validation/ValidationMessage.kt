@@ -21,4 +21,6 @@ object ValidationMessage {
 
     const val PAYMENT_ID_NOT_BLANK = "Payment id can not be blank"
     const val GROUP_ID_NOT_BLANK = "Group id can not be blank"
+
+    const val USER_NOT_RECIPIENT = "Only recipient can submit decision"
 }

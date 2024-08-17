@@ -31,7 +31,6 @@ import pl.edu.agh.gem.integration.ability.stubGroupManagerGroupData
 import pl.edu.agh.gem.integration.ability.stubGroupManagerUserGroups
 import pl.edu.agh.gem.internal.persistence.PaymentRepository
 import pl.edu.agh.gem.internal.service.MissingPaymentException
-import pl.edu.agh.gem.internal.service.PaymentRecipientDecisionException
 import pl.edu.agh.gem.internal.service.Quadruple
 import pl.edu.agh.gem.util.DummyData.ANOTHER_USER_ID
 import pl.edu.agh.gem.util.DummyData.CURRENCY_1
@@ -66,6 +65,7 @@ import pl.edu.agh.gem.validation.ValidationMessage.TARGET_CURRENCY_NOT_IN_GROUP_
 import pl.edu.agh.gem.validation.ValidationMessage.TARGET_CURRENCY_PATTERN
 import pl.edu.agh.gem.validation.ValidationMessage.TITLE_MAX_LENGTH
 import pl.edu.agh.gem.validation.ValidationMessage.TITLE_NOT_BLANK
+import pl.edu.agh.gem.validation.ValidationMessage.USER_NOT_RECIPIENT
 import java.math.BigDecimal
 
 class ExternalPaymentControllerIT(
@@ -334,10 +334,7 @@ class ExternalPaymentControllerIT(
         val response = service.decide(decisionRequest, createGemUser(id = USER_ID))
 
         // then
-        response shouldHaveHttpStatus FORBIDDEN
-        response shouldHaveErrors {
-            errors shouldHaveSize 1
-            errors.first().code shouldBe PaymentRecipientDecisionException::class.simpleName
-        }
+        response shouldHaveHttpStatus BAD_REQUEST
+        response shouldHaveValidatorError USER_NOT_RECIPIENT
     }
 },)

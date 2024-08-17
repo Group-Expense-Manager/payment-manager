@@ -43,6 +43,7 @@ import pl.edu.agh.gem.validation.ValidationMessage.BASE_CURRENCY_NOT_IN_GROUP_CU
 import pl.edu.agh.gem.validation.ValidationMessage.RECIPIENT_IS_CREATOR
 import pl.edu.agh.gem.validation.ValidationMessage.RECIPIENT_NOT_GROUP_MEMBER
 import pl.edu.agh.gem.validation.ValidationMessage.TARGET_CURRENCY_NOT_IN_GROUP_CURRENCIES
+import pl.edu.agh.gem.validation.ValidationMessage.USER_NOT_RECIPIENT
 import pl.edu.agh.gem.validator.ValidatorsException
 import java.time.Instant
 
@@ -240,14 +241,17 @@ class PaymentServiceTest : ShouldSpec({
         verify(paymentRepository, times(0)).save(anyVararg(Payment::class))
     }
 
-    should("throw PaymentRecipientDecisionException when payment is not present") {
+    should("throw ValidatorsException when user is not recipient") {
         // given
         val payment = createPayment()
         whenever(paymentRepository.findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)).thenReturn(payment)
         val paymentDecision = createPaymentDecision(userId = USER_ID)
 
         // when & then
-        shouldThrowExactly<PaymentRecipientDecisionException> { paymentService.decide(paymentDecision) }
+        shouldThrowWithMessage<ValidatorsException>("Failed validations: $USER_NOT_RECIPIENT") {
+            paymentService.decide(paymentDecision)
+        }
+
         verify(paymentRepository, times(1)).findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)
         verify(paymentRepository, times(0)).save(anyVararg(Payment::class))
     }
