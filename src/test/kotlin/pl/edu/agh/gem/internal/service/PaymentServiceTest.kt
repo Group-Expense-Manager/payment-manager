@@ -31,7 +31,6 @@ import pl.edu.agh.gem.util.createAmount
 import pl.edu.agh.gem.util.createCurrencies
 import pl.edu.agh.gem.util.createExchangeRate
 import pl.edu.agh.gem.util.createGroup
-import pl.edu.agh.gem.util.createPayment
 import pl.edu.agh.gem.util.createPaymentCreation
 import pl.edu.agh.gem.validation.ValidationMessage.BASE_CURRENCY_EQUAL_TO_TARGET_CURRENCY
 import pl.edu.agh.gem.validation.ValidationMessage.BASE_CURRENCY_NOT_AVAILABLE
