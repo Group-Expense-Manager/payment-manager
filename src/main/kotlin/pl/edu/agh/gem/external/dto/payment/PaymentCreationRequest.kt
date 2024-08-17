@@ -1,64 +1,69 @@
 package pl.edu.agh.gem.external.dto.payment
 
+import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Positive
 import jakarta.validation.constraints.Size
+import org.springframework.format.annotation.DateTimeFormat
+import org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME
 import pl.edu.agh.gem.annotation.nullorblank.NullOrNotBlank
 import pl.edu.agh.gem.annotation.nullorpattern.NullOrPattern
-import pl.edu.agh.gem.internal.model.payment.Payment
-import pl.edu.agh.gem.internal.model.payment.PaymentAction.CREATED
-import pl.edu.agh.gem.internal.model.payment.PaymentStatus.PENDING
+import pl.edu.agh.gem.internal.model.payment.Amount
+import pl.edu.agh.gem.internal.model.payment.PaymentCreation
 import pl.edu.agh.gem.internal.model.payment.PaymentType
-import pl.edu.agh.gem.internal.model.payment.StatusHistoryEntry
-import pl.edu.agh.gem.validation.ValidationMessage.ATTACHMENT_ID_NOT_BLANK
+import pl.edu.agh.gem.validation.ValidationMessage.ATTACHMENT_ID_NULL_OR_NOT_BLANK
 import pl.edu.agh.gem.validation.ValidationMessage.BASE_CURRENCY_NOT_BLANK
 import pl.edu.agh.gem.validation.ValidationMessage.BASE_CURRENCY_PATTERN
 import pl.edu.agh.gem.validation.ValidationMessage.MESSAGE_NULL_OR_NOT_BLANK
-import pl.edu.agh.gem.validation.ValidationMessage.POSITIVE_SUM
+import pl.edu.agh.gem.validation.ValidationMessage.POSITIVE_AMOUNT
 import pl.edu.agh.gem.validation.ValidationMessage.RECIPIENT_ID_NOT_BLANK
 import pl.edu.agh.gem.validation.ValidationMessage.TARGET_CURRENCY_PATTERN
 import pl.edu.agh.gem.validation.ValidationMessage.TITLE_MAX_LENGTH
 import pl.edu.agh.gem.validation.ValidationMessage.TITLE_NOT_BLANK
 import java.math.BigDecimal
-import java.time.Instant.now
-import java.util.UUID.randomUUID
+import java.time.Instant
 
 data class PaymentCreationRequest(
     @field:NotBlank(message = TITLE_NOT_BLANK)
     @field:Size(max = 30, message = TITLE_MAX_LENGTH)
     val title: String,
     val type: PaymentType,
-    @field:Positive(message = POSITIVE_SUM)
-    val sum: BigDecimal,
-    @field:NotBlank(message = BASE_CURRENCY_NOT_BLANK)
-    @field:Pattern(regexp = "[A-Z]{3}", message = BASE_CURRENCY_PATTERN)
-    val baseCurrency: String,
+    @field:Valid
+    val amount: AmountDto,
     @field:NullOrPattern(message = TARGET_CURRENCY_PATTERN, pattern = "[A-Z]{3}")
     val targetCurrency: String?,
+    @field:DateTimeFormat(iso = DATE_TIME)
+    val date: Instant,
     @field:NotBlank(message = RECIPIENT_ID_NOT_BLANK)
     val recipientId: String,
     @field:NullOrNotBlank(message = MESSAGE_NULL_OR_NOT_BLANK)
     val message: String? = null,
-    @field:NotBlank(message = ATTACHMENT_ID_NOT_BLANK)
-    val attachmentId: String,
+    @field:NullOrNotBlank(message = ATTACHMENT_ID_NULL_OR_NOT_BLANK)
+    val attachmentId: String?,
 ) {
-    fun toDomain(userId: String, groupId: String) = Payment(
-        id = randomUUID().toString(),
+    fun toDomain(userId: String, groupId: String) = PaymentCreation(
         groupId = groupId,
         creatorId = userId,
         recipientId = recipientId,
         title = title,
         type = type,
-        sum = sum,
-        baseCurrency = baseCurrency,
+        amount = amount.toDomain(),
         targetCurrency = targetCurrency,
-        exchangeRate = null,
-        createdAt = now(),
-        updatedAt = now(),
+        date = date,
         attachmentId = attachmentId,
-        status = PENDING,
-        statusHistory = arrayListOf(StatusHistoryEntry(userId, CREATED, comment = message)),
+    )
+}
 
+data class AmountDto(
+    @field:Positive(message = POSITIVE_AMOUNT)
+    val value: BigDecimal,
+    @field:NotBlank(message = BASE_CURRENCY_NOT_BLANK)
+    @field:Pattern(regexp = "[A-Z]{3}", message = BASE_CURRENCY_PATTERN)
+    val currency: String,
+) {
+    fun toDomain() = Amount(
+        value = value,
+        currency = currency,
     )
 }

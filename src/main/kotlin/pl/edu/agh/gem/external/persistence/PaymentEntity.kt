@@ -2,11 +2,12 @@ package pl.edu.agh.gem.external.persistence
 
 import org.springframework.data.annotation.Id
 import org.springframework.data.mongodb.core.mapping.Document
+import pl.edu.agh.gem.internal.model.payment.Amount
+import pl.edu.agh.gem.internal.model.payment.FxData
 import pl.edu.agh.gem.internal.model.payment.Payment
+import pl.edu.agh.gem.internal.model.payment.PaymentHistoryEntry
 import pl.edu.agh.gem.internal.model.payment.PaymentStatus
 import pl.edu.agh.gem.internal.model.payment.PaymentType
-import pl.edu.agh.gem.internal.model.payment.StatusHistoryEntry
-import java.math.BigDecimal
 import java.time.Instant
 
 @Document("payments")
@@ -18,15 +19,14 @@ data class PaymentEntity(
     val recipientId: String,
     val title: String,
     val type: PaymentType,
-    val sum: BigDecimal,
-    val baseCurrency: String,
-    val targetCurrency: String?,
-    val exchangeRate: BigDecimal?,
+    val amount: Amount,
+    val fxData: FxData?,
+    val date: Instant,
     val createdAt: Instant,
     val updatedAt: Instant,
     val attachmentId: String,
     val status: PaymentStatus,
-    val statusHistory: List<StatusHistoryEntry>,
+    val history: List<PaymentHistoryEntry>,
 ) {
     fun toDomain() = Payment(
         id = id,
@@ -35,15 +35,14 @@ data class PaymentEntity(
         recipientId = recipientId,
         title = title,
         type = type,
-        sum = sum,
-        baseCurrency = baseCurrency,
-        targetCurrency = targetCurrency,
-        exchangeRate = exchangeRate,
+        amount = amount,
+        fxData = fxData,
+        date = date,
         createdAt = createdAt,
         updatedAt = updatedAt,
         attachmentId = attachmentId,
         status = status,
-        statusHistory = statusHistory,
+        history = history,
     )
 }
 
@@ -54,13 +53,12 @@ fun Payment.toEntity() = PaymentEntity(
     recipientId = recipientId,
     title = title,
     type = type,
-    sum = sum,
-    baseCurrency = baseCurrency,
-    targetCurrency = targetCurrency,
-    exchangeRate = exchangeRate,
+    amount = amount,
+    fxData = fxData,
+    date = date,
     createdAt = createdAt,
     updatedAt = updatedAt,
     attachmentId = attachmentId,
     status = status,
-    statusHistory = statusHistory,
+    history = history,
 )

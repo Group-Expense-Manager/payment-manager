@@ -16,22 +16,22 @@ class CurrenciesValidator : BaseValidator<PaymentCreationDataWrapper>() {
     )
 
     private fun validateBaseCurrencyInGroupCurrencies(paymentCreationDataWrapper: PaymentCreationDataWrapper): Boolean {
-        return paymentCreationDataWrapper.payment.targetCurrency != null ||
-            paymentCreationDataWrapper.groupData.currencies.any { it.code == paymentCreationDataWrapper.payment.baseCurrency }
+        return paymentCreationDataWrapper.paymentCreation.targetCurrency != null ||
+            paymentCreationDataWrapper.groupData.currencies.any { it.code == paymentCreationDataWrapper.paymentCreation.amount.currency }
     }
 
     private fun validateBaseCurrencyNotEqualTargetCurrency(paymentCreationDataWrapper: PaymentCreationDataWrapper): Boolean {
-        return paymentCreationDataWrapper.payment.targetCurrency == null ||
-            paymentCreationDataWrapper.payment.baseCurrency != paymentCreationDataWrapper.payment.targetCurrency
+        return paymentCreationDataWrapper.paymentCreation.targetCurrency == null ||
+            paymentCreationDataWrapper.paymentCreation.amount.currency != paymentCreationDataWrapper.paymentCreation.targetCurrency
     }
 
     private fun validateTargetCurrencyInGroupCurrencies(paymentCreationDataWrapper: PaymentCreationDataWrapper): Boolean {
-        return paymentCreationDataWrapper.payment.targetCurrency == null ||
-            paymentCreationDataWrapper.groupData.currencies.any { it.code == paymentCreationDataWrapper.payment.targetCurrency }
+        return paymentCreationDataWrapper.paymentCreation.targetCurrency == null ||
+            paymentCreationDataWrapper.groupData.currencies.any { it.code == paymentCreationDataWrapper.paymentCreation.targetCurrency }
     }
 
     private fun validateBaseCurrencyAvailable(paymentCreationDataWrapper: PaymentCreationDataWrapper): Boolean {
-        return paymentCreationDataWrapper.payment.targetCurrency == null ||
-            paymentCreationDataWrapper.availableCurrencies.any { it.code == paymentCreationDataWrapper.payment.baseCurrency }
+        return paymentCreationDataWrapper.paymentCreation.targetCurrency == null ||
+            paymentCreationDataWrapper.availableCurrencies.any { it.code == paymentCreationDataWrapper.paymentCreation.amount.currency }
     }
 }

@@ -12,23 +12,26 @@ import pl.edu.agh.gem.helper.user.DummyUser.USER_ID
 import pl.edu.agh.gem.helper.user.createGemUser
 import pl.edu.agh.gem.integration.BaseIntegrationSpec
 import pl.edu.agh.gem.integration.ability.ServiceTestClient
+import pl.edu.agh.gem.integration.ability.stubAttachmentStoreGenerateBlankAttachment
 import pl.edu.agh.gem.integration.ability.stubCurrencyManagerAvailableCurrencies
 import pl.edu.agh.gem.integration.ability.stubCurrencyManagerExchangeRate
 import pl.edu.agh.gem.integration.ability.stubGroupManagerGroupData
 import pl.edu.agh.gem.util.DummyData.CURRENCY_1
 import pl.edu.agh.gem.util.DummyData.CURRENCY_2
 import pl.edu.agh.gem.util.DummyData.EXCHANGE_RATE_VALUE
+import pl.edu.agh.gem.util.createAmountDto
 import pl.edu.agh.gem.util.createCurrenciesDTO
 import pl.edu.agh.gem.util.createCurrenciesResponse
 import pl.edu.agh.gem.util.createExchangeRateResponse
+import pl.edu.agh.gem.util.createGroupAttachmentResponse
 import pl.edu.agh.gem.util.createGroupResponse
 import pl.edu.agh.gem.util.createMembersDTO
 import pl.edu.agh.gem.util.createPaymentCreationRequest
-import pl.edu.agh.gem.validation.ValidationMessage.ATTACHMENT_ID_NOT_BLANK
+import pl.edu.agh.gem.validation.ValidationMessage.ATTACHMENT_ID_NULL_OR_NOT_BLANK
 import pl.edu.agh.gem.validation.ValidationMessage.BASE_CURRENCY_NOT_BLANK
 import pl.edu.agh.gem.validation.ValidationMessage.BASE_CURRENCY_PATTERN
 import pl.edu.agh.gem.validation.ValidationMessage.MESSAGE_NULL_OR_NOT_BLANK
-import pl.edu.agh.gem.validation.ValidationMessage.POSITIVE_SUM
+import pl.edu.agh.gem.validation.ValidationMessage.POSITIVE_AMOUNT
 import pl.edu.agh.gem.validation.ValidationMessage.RECIPIENT_ID_NOT_BLANK
 import pl.edu.agh.gem.validation.ValidationMessage.TARGET_CURRENCY_PATTERN
 import pl.edu.agh.gem.validation.ValidationMessage.TITLE_MAX_LENGTH
@@ -39,7 +42,7 @@ class ExternalPaymentControllerIT(
     private val service: ServiceTestClient,
 ) : BaseIntegrationSpec({
 
-    should("create payment") {
+    should("create payment when attachmentId is provided") {
         // given
         val paymentCreationRequest = createPaymentCreationRequest()
         stubGroupManagerGroupData(createGroupResponse(groupCurrencies = createCurrenciesDTO(CURRENCY_2)), GROUP_ID)
@@ -49,6 +52,27 @@ class ExternalPaymentControllerIT(
             CURRENCY_1,
             CURRENCY_2,
         )
+
+        // when
+        val response = service.createPayment(paymentCreationRequest, createGemUser(USER_ID), GROUP_ID)
+
+        // then
+        response shouldHaveHttpStatus CREATED
+    }
+
+    should("create payment when attachmentId is not provided") {
+        // given
+        val paymentCreationRequest = createPaymentCreationRequest(attachmentId = null)
+        val attachment = createGroupAttachmentResponse()
+
+        stubGroupManagerGroupData(createGroupResponse(groupCurrencies = createCurrenciesDTO(CURRENCY_2)), GROUP_ID)
+        stubCurrencyManagerAvailableCurrencies(createCurrenciesResponse(CURRENCY_1, CURRENCY_2))
+        stubCurrencyManagerExchangeRate(
+            createExchangeRateResponse(value = EXCHANGE_RATE_VALUE),
+            CURRENCY_1,
+            CURRENCY_2,
+        )
+        stubAttachmentStoreGenerateBlankAttachment(attachment, GROUP_ID, USER_ID)
 
         // when
         val response = service.createPayment(paymentCreationRequest, createGemUser(USER_ID), GROUP_ID)
@@ -79,13 +103,13 @@ class ExternalPaymentControllerIT(
                 TITLE_MAX_LENGTH,
                 createPaymentCreationRequest(title = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
             ),
-            Pair(POSITIVE_SUM, createPaymentCreationRequest(sum = BigDecimal.ZERO)),
-            Pair(BASE_CURRENCY_NOT_BLANK, createPaymentCreationRequest(baseCurrency = "")),
-            Pair(BASE_CURRENCY_PATTERN, createPaymentCreationRequest(baseCurrency = "pln")),
+            Pair(POSITIVE_AMOUNT, createPaymentCreationRequest(amount = createAmountDto(value = BigDecimal.ZERO))),
+            Pair(BASE_CURRENCY_NOT_BLANK, createPaymentCreationRequest(amount = createAmountDto(currency = ""))),
+            Pair(BASE_CURRENCY_PATTERN, createPaymentCreationRequest(amount = createAmountDto(currency = "pln"))),
             Pair(TARGET_CURRENCY_PATTERN, createPaymentCreationRequest(targetCurrency = "pln")),
             Pair(RECIPIENT_ID_NOT_BLANK, createPaymentCreationRequest(recipientId = "")),
             Pair(MESSAGE_NULL_OR_NOT_BLANK, createPaymentCreationRequest(message = "")),
-            Pair(ATTACHMENT_ID_NOT_BLANK, createPaymentCreationRequest(attachmentId = "")),
+            Pair(ATTACHMENT_ID_NULL_OR_NOT_BLANK, createPaymentCreationRequest(attachmentId = "")),
 
         ) { (expectedMessage, paymentCreationRequest) ->
             // when

@@ -1,5 +1,6 @@
 package pl.edu.agh.gem.util
 
+import pl.edu.agh.gem.external.dto.attachment.GroupAttachmentResponse
 import pl.edu.agh.gem.external.dto.currency.CurrenciesResponse
 import pl.edu.agh.gem.external.dto.currency.ExchangeRateResponse
 import pl.edu.agh.gem.external.dto.group.CurrencyDTO
@@ -7,6 +8,7 @@ import pl.edu.agh.gem.external.dto.group.GroupDto
 import pl.edu.agh.gem.external.dto.group.GroupResponse
 import pl.edu.agh.gem.external.dto.group.MemberDTO
 import pl.edu.agh.gem.external.dto.group.UserGroupsResponse
+import pl.edu.agh.gem.external.dto.payment.AmountDto
 import pl.edu.agh.gem.external.dto.payment.PaymentCreationRequest
 import pl.edu.agh.gem.external.persistence.PaymentEntity
 import pl.edu.agh.gem.helper.group.DummyGroup.GROUP_ID
@@ -16,15 +18,17 @@ import pl.edu.agh.gem.helper.user.DummyUser.OTHER_USER_ID
 import pl.edu.agh.gem.helper.user.DummyUser.USER_ID
 import pl.edu.agh.gem.internal.model.currency.Currency
 import pl.edu.agh.gem.internal.model.currency.ExchangeRate
-import pl.edu.agh.gem.internal.model.group.Currencies
 import pl.edu.agh.gem.internal.model.group.GroupData
+import pl.edu.agh.gem.internal.model.payment.Amount
+import pl.edu.agh.gem.internal.model.payment.FxData
 import pl.edu.agh.gem.internal.model.payment.Payment
 import pl.edu.agh.gem.internal.model.payment.PaymentAction.CREATED
+import pl.edu.agh.gem.internal.model.payment.PaymentCreation
+import pl.edu.agh.gem.internal.model.payment.PaymentHistoryEntry
 import pl.edu.agh.gem.internal.model.payment.PaymentStatus
 import pl.edu.agh.gem.internal.model.payment.PaymentStatus.PENDING
 import pl.edu.agh.gem.internal.model.payment.PaymentType
 import pl.edu.agh.gem.internal.model.payment.PaymentType.CASH
-import pl.edu.agh.gem.internal.model.payment.StatusHistoryEntry
 import pl.edu.agh.gem.model.GroupMembers
 import pl.edu.agh.gem.util.DummyData.ATTACHMENT_ID
 import pl.edu.agh.gem.util.DummyData.CURRENCY_1
@@ -38,18 +42,50 @@ import java.time.Instant.now
 fun createPaymentCreationRequest(
     title: String = "My Payment",
     type: PaymentType = CASH,
-    sum: BigDecimal = "10".toBigDecimal(),
-    baseCurrency: String = CURRENCY_1,
+    amount: AmountDto = createAmountDto(),
     targetCurrency: String? = CURRENCY_2,
+    date: Instant = Instant.ofEpochMilli(0L),
     recipientId: String = OTHER_USER_ID,
     message: String? = "Something",
-    attachmentId: String = ATTACHMENT_ID,
+    attachmentId: String? = ATTACHMENT_ID,
 ) = PaymentCreationRequest(
     title = title,
     type = type,
-    sum = sum,
-    baseCurrency = baseCurrency,
+    amount = amount,
     targetCurrency = targetCurrency,
+    date = date,
+    recipientId = recipientId,
+    message = message,
+    attachmentId = attachmentId,
+)
+
+fun createAmountDto(
+    value: BigDecimal = "10".toBigDecimal(),
+    currency: String = CURRENCY_1,
+) = AmountDto(
+    value = value,
+    currency = currency,
+)
+
+fun createPaymentCreation(
+    groupId: String = GROUP_ID,
+    creatorId: String = USER_ID,
+    title: String = "My Payment",
+    type: PaymentType = CASH,
+    amount: Amount = createAmount(),
+    targetCurrency: String? = CURRENCY_2,
+    date: Instant = Instant.ofEpochMilli(0L),
+    recipientId: String = OTHER_USER_ID,
+    message: String? = "Something",
+    attachmentId: String? = ATTACHMENT_ID,
+) = PaymentCreation(
+    creatorId = creatorId,
+    groupId = groupId,
+    title = title,
+    type = type,
+    amount = amount,
+    targetCurrency = targetCurrency,
+    date = date,
     recipientId = recipientId,
     message = message,
     attachmentId = attachmentId,
@@ -62,15 +98,14 @@ fun createPaymentEntity(
     recipientId: String = OTHER_USER_ID,
     title: String = "My Payment",
     type: PaymentType = CASH,
-    sum: BigDecimal = "10".toBigDecimal(),
-    baseCurrency: String = CURRENCY_1,
-    targetCurrency: String? = CURRENCY_2,
-    exchangeRate: BigDecimal? = EXCHANGE_RATE_VALUE,
+    amount: Amount = createAmount(),
+    fxData: FxData? = createFxData(),
+    date: Instant = Instant.ofEpochMilli(0L),
     createdAt: Instant = Instant.ofEpochMilli(10),
     updatedAt: Instant = Instant.ofEpochMilli(20),
     attachmentId: String = ATTACHMENT_ID,
     status: PaymentStatus = PENDING,
-    statusHistory: List<StatusHistoryEntry> = arrayListOf(StatusHistoryEntry(USER_ID, CREATED)),
+    history: List<PaymentHistoryEntry> = arrayListOf(PaymentHistoryEntry(USER_ID, CREATED)),
 ) = PaymentEntity(
     id = id,
     groupId = groupId,
@@ -78,15 +113,30 @@ fun createPaymentEntity(
     recipientId = recipientId,
     title = title,
     type = type,
-    sum = sum,
-    baseCurrency = baseCurrency,
-    targetCurrency = targetCurrency,
-    exchangeRate = exchangeRate,
+    amount = amount,
+    fxData = fxData,
+    date = date,
     createdAt = createdAt,
     updatedAt = updatedAt,
     attachmentId = attachmentId,
     status = status,
-    statusHistory = statusHistory,
+    history = history,
+)
+
+fun createAmount(
+    value: BigDecimal = "10".toBigDecimal(),
+    currency: String = CURRENCY_1,
+) = Amount(
+    value = value,
+    currency = currency,
+)
+
+fun createFxData(
+    targetCurrency: String = CURRENCY_2,
+    exchangeRate: BigDecimal = EXCHANGE_RATE_VALUE,
+) = FxData(
+    targetCurrency = targetCurrency,
+    exchangeRate = exchangeRate,
 )
 
 fun createPayment(
@@ -96,15 +146,14 @@ fun createPayment(
     recipientId: String = OTHER_USER_ID,
     title: String = "My Payment",
     type: PaymentType = CASH,
-    sum: BigDecimal = "10".toBigDecimal(),
-    baseCurrency: String = CURRENCY_1,
-    targetCurrency: String? = CURRENCY_2,
-    exchangeRate: BigDecimal? = EXCHANGE_RATE_VALUE,
+    amount: Amount = createAmount(),
+    fxData: FxData? = createFxData(),
+    date: Instant = Instant.ofEpochMilli(0L),
     createdAt: Instant = Instant.ofEpochMilli(10),
     updatedAt: Instant = Instant.ofEpochMilli(20),
     attachmentId: String = ATTACHMENT_ID,
     status: PaymentStatus = PENDING,
-    statusHistory: List<StatusHistoryEntry> = arrayListOf(StatusHistoryEntry(USER_ID, CREATED)),
+    history: List<PaymentHistoryEntry> = arrayListOf(PaymentHistoryEntry(USER_ID, CREATED)),
 ) = Payment(
     id = id,
     groupId = groupId,
@@ -112,15 +161,14 @@ fun createPayment(
     recipientId = recipientId,
     title = title,
     type = type,
-    sum = sum,
-    baseCurrency = baseCurrency,
-    targetCurrency = targetCurrency,
-    exchangeRate = exchangeRate,
+    amount = amount,
+    fxData = fxData,
+    date = date,
     createdAt = createdAt,
     updatedAt = updatedAt,
     attachmentId = attachmentId,
     status = status,
-    statusHistory = statusHistory,
+    history = history,
 )
 fun createCurrencies(
     vararg currencies: String = arrayOf(CURRENCY_1),
@@ -171,11 +219,17 @@ fun createUserGroupsResponse(
 fun createGroup(
     members: GroupMembers = createGroupMembers(USER_ID, OTHER_USER_ID),
     acceptRequired: Boolean = false,
-    currencies: Currencies = createCurrencies(CURRENCY_1, CURRENCY_2),
+    currencies: List<Currency> = createCurrencies(CURRENCY_1, CURRENCY_2),
 ) = GroupData(
     members = members,
     acceptRequired = acceptRequired,
     currencies = currencies,
+)
+
+fun createGroupAttachmentResponse(
+    attachmentId: String = ATTACHMENT_ID,
+) = GroupAttachmentResponse(
+    id = attachmentId,
 )
 
 object DummyData {

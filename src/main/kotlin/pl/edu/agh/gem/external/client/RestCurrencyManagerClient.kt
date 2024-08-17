@@ -19,8 +19,8 @@ import pl.edu.agh.gem.headers.HeadersUtils.withAppContentType
 import pl.edu.agh.gem.internal.client.CurrencyManagerClient
 import pl.edu.agh.gem.internal.client.CurrencyManagerClientException
 import pl.edu.agh.gem.internal.client.RetryableCurrencyManagerClientException
+import pl.edu.agh.gem.internal.model.currency.Currency
 import pl.edu.agh.gem.internal.model.currency.ExchangeRate
-import pl.edu.agh.gem.internal.model.group.Currencies
 import pl.edu.agh.gem.paths.Paths.INTERNAL
 import java.time.Instant
 
@@ -31,7 +31,7 @@ class RestCurrencyManagerClient(
 ) : CurrencyManagerClient {
 
     @Retry(name = "currencyManagerClient")
-    override fun getAvailableCurrencies(): Currencies {
+    override fun getAvailableCurrencies(): List<Currency> {
         return try {
             restTemplate.exchange(
                 resolveAvailableCurrenciesAddress(),

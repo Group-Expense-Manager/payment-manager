@@ -10,13 +10,22 @@ data class Payment(
     val recipientId: String,
     val title: String,
     val type: PaymentType,
-    val sum: BigDecimal,
-    val baseCurrency: String,
-    val targetCurrency: String?,
-    val exchangeRate: BigDecimal?,
+    val amount: Amount,
+    val fxData: FxData?,
+    val date: Instant,
     val createdAt: Instant,
     val updatedAt: Instant,
     val attachmentId: String,
     val status: PaymentStatus,
-    val statusHistory: List<StatusHistoryEntry>,
+    val history: List<PaymentHistoryEntry>,
+)
+
+data class Amount(
+    val value: BigDecimal,
+    val currency: String,
+)
+
+data class FxData(
+    val targetCurrency: String,
+    val exchangeRate: BigDecimal,
 )

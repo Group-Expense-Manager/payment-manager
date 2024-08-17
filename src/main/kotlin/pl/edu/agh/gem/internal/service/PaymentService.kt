@@ -1,10 +1,13 @@
 package pl.edu.agh.gem.internal.service
 
 import org.springframework.stereotype.Service
+import pl.edu.agh.gem.internal.client.AttachmentStoreClient
 import pl.edu.agh.gem.internal.client.CurrencyManagerClient
 import pl.edu.agh.gem.internal.client.GroupManagerClient
 import pl.edu.agh.gem.internal.model.group.GroupData
+import pl.edu.agh.gem.internal.model.payment.FxData
 import pl.edu.agh.gem.internal.model.payment.Payment
+import pl.edu.agh.gem.internal.model.payment.PaymentCreation
 import pl.edu.agh.gem.internal.persistence.PaymentRepository
 import pl.edu.agh.gem.validation.creation.CurrenciesValidator
 import pl.edu.agh.gem.validation.creation.PaymentCreationDataWrapper
@@ -17,6 +20,7 @@ import java.time.Instant
 class PaymentService(
     private val groupManagerClient: GroupManagerClient,
     private val currencyManagerClient: CurrencyManagerClient,
+    private val attachmentStoreClient: AttachmentStoreClient,
     private val paymentRepository: PaymentRepository,
 ) {
 
@@ -29,27 +33,36 @@ class PaymentService(
         return groupManagerClient.getGroup(groupId)
     }
 
-    fun createPayment(groupData: GroupData, payment: Payment): Payment {
+    fun createPayment(groupData: GroupData, paymentCreation: PaymentCreation): Payment {
         paymentCreationValidators
-            .getFailedValidations(createPaymentCreationDataWrapper(groupData, payment))
+            .getFailedValidations(createPaymentCreationDataWrapper(groupData, paymentCreation))
             .takeIf { it.isNotEmpty() }
             ?.also { throw ValidatorsException(it) }
 
+        val attachmentId = paymentCreation.attachmentId
+            ?: attachmentStoreClient.generateBlankAttachment(paymentCreation.groupId, paymentCreation.creatorId).id
+
         return paymentRepository.save(
-            payment.copy(
-                exchangeRate = getExchangeRate(payment.baseCurrency, payment.targetCurrency, payment.createdAt),
+            paymentCreation.toPayment(
+                fxData = getFxData(paymentCreation.amount.currency, paymentCreation.targetCurrency, paymentCreation.date),
+                attachmentId = attachmentId,
             ),
         )
     }
 
-    private fun createPaymentCreationDataWrapper(groupData: GroupData, payment: Payment): PaymentCreationDataWrapper {
+    private fun createPaymentCreationDataWrapper(groupData: GroupData, paymentCreation: PaymentCreation): PaymentCreationDataWrapper {
         return PaymentCreationDataWrapper(
             groupData,
-            payment,
+            paymentCreation,
             currencyManagerClient.getAvailableCurrencies(),
         )
     }
 
-    private fun getExchangeRate(baseCurrency: String, targetCurrency: String?, date: Instant) =
-        targetCurrency?.let { currencyManagerClient.getExchangeRate(baseCurrency, targetCurrency, date) }?.value
+    private fun getFxData(baseCurrency: String, targetCurrency: String?, date: Instant) =
+        targetCurrency?.let {
+            FxData(
+                targetCurrency = targetCurrency,
+                exchangeRate = currencyManagerClient.getExchangeRate(baseCurrency, targetCurrency, date).value,
+            )
+        }
 }

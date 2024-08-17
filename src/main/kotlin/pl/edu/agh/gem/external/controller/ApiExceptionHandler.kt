@@ -17,8 +17,10 @@ import pl.edu.agh.gem.error.withCode
 import pl.edu.agh.gem.error.withDetails
 import pl.edu.agh.gem.error.withMessage
 import pl.edu.agh.gem.exception.UserWithoutGroupAccessException
+import pl.edu.agh.gem.internal.client.AttachmentStoreClientException
 import pl.edu.agh.gem.internal.client.CurrencyManagerClientException
 import pl.edu.agh.gem.internal.client.GroupManagerClientException
+import pl.edu.agh.gem.internal.client.RetryableAttachmentStoreClientException
 import pl.edu.agh.gem.internal.client.RetryableCurrencyManagerClientException
 import pl.edu.agh.gem.internal.client.RetryableGroupManagerClientException
 import pl.edu.agh.gem.validator.ValidatorsException
@@ -76,6 +78,18 @@ class ApiExceptionHandler {
     @ExceptionHandler(RetryableGroupManagerClientException::class)
     fun handleRetryableGroupManagerClientException(
         exception: RetryableGroupManagerClientException,
+    ): ResponseEntity<SimpleErrorsHolder> {
+        return ResponseEntity(handleError(exception), INTERNAL_SERVER_ERROR)
+    }
+
+    @ExceptionHandler(AttachmentStoreClientException::class)
+    fun handleAttachmentStoreClientException(exception: AttachmentStoreClientException): ResponseEntity<SimpleErrorsHolder> {
+        return ResponseEntity(handleError(exception), INTERNAL_SERVER_ERROR)
+    }
+
+    @ExceptionHandler(RetryableAttachmentStoreClientException::class)
+    fun handleRetryableAttachmentStoreClientException(
+        exception: RetryableAttachmentStoreClientException,
     ): ResponseEntity<SimpleErrorsHolder> {
         return ResponseEntity(handleError(exception), INTERNAL_SERVER_ERROR)
     }

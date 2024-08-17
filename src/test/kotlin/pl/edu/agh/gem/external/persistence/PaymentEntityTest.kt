@@ -23,15 +23,13 @@ class PaymentEntityTest : ShouldSpec({
             it.recipientId shouldBe paymentEntity.recipientId
             it.title shouldBe paymentEntity.title
             it.type shouldBe paymentEntity.type
-            it.sum shouldBe paymentEntity.sum
-            it.baseCurrency shouldBe paymentEntity.baseCurrency
-            it.targetCurrency shouldBe paymentEntity.targetCurrency
-            it.exchangeRate shouldBe paymentEntity.exchangeRate
+            it.amount shouldBe paymentEntity.amount
+            it.fxData shouldBe paymentEntity.fxData
             it.createdAt shouldBe paymentEntity.createdAt
             it.updatedAt shouldBe paymentEntity.updatedAt
             it.attachmentId shouldBe paymentEntity.attachmentId
             it.status shouldBe paymentEntity.status
-            it.statusHistory shouldBe paymentEntity.statusHistory
+            it.history shouldBe paymentEntity.history
         }
     }
 
@@ -51,15 +49,13 @@ class PaymentEntityTest : ShouldSpec({
             it.recipientId shouldBe payment.recipientId
             it.title shouldBe payment.title
             it.type shouldBe payment.type
-            it.sum shouldBe payment.sum
-            it.baseCurrency shouldBe payment.baseCurrency
-            it.targetCurrency shouldBe payment.targetCurrency
-            it.exchangeRate shouldBe payment.exchangeRate
+            it.amount shouldBe payment.amount
+            it.fxData shouldBe payment.fxData
             it.createdAt shouldBe payment.createdAt
             it.updatedAt shouldBe payment.updatedAt
             it.attachmentId shouldBe payment.attachmentId
             it.status shouldBe payment.status
-            it.statusHistory shouldBe payment.statusHistory
+            it.history shouldBe payment.history
         }
     }
 },)
