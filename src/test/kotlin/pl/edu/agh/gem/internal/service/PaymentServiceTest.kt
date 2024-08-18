@@ -48,9 +48,11 @@ import pl.edu.agh.gem.util.createPaymentUpdateFromPayment
 import pl.edu.agh.gem.validation.ValidationMessage.BASE_CURRENCY_EQUAL_TO_TARGET_CURRENCY
 import pl.edu.agh.gem.validation.ValidationMessage.BASE_CURRENCY_NOT_AVAILABLE
 import pl.edu.agh.gem.validation.ValidationMessage.BASE_CURRENCY_NOT_IN_GROUP_CURRENCIES
+import pl.edu.agh.gem.validation.ValidationMessage.NO_MODIFICATION
 import pl.edu.agh.gem.validation.ValidationMessage.RECIPIENT_IS_CREATOR
 import pl.edu.agh.gem.validation.ValidationMessage.RECIPIENT_NOT_GROUP_MEMBER
 import pl.edu.agh.gem.validation.ValidationMessage.TARGET_CURRENCY_NOT_IN_GROUP_CURRENCIES
+import pl.edu.agh.gem.validation.ValidationMessage.USER_NOT_CREATOR
 import pl.edu.agh.gem.validation.ValidationMessage.USER_NOT_RECIPIENT
 import pl.edu.agh.gem.validator.ValidatorsException
 import java.math.BigDecimal
@@ -299,7 +301,9 @@ class PaymentServiceTest : ShouldSpec({
         whenever(paymentRepository.findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)).thenReturn(payment)
 
         // when & then
-        shouldThrowExactly<PaymentDeletionAccessException> { paymentService.deletePayment(PAYMENT_ID, GROUP_ID, USER_ID) }
+        shouldThrowWithMessage<ValidatorsException>("Failed validations: $USER_NOT_CREATOR") {
+            paymentService.deletePayment(PAYMENT_ID, GROUP_ID, USER_ID)
+        }
         verify(paymentRepository, times(1)).findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)
         verify(paymentRepository, times(0)).delete(payment)
         verify(archivedPaymentRepository, times(0)).add(payment)
@@ -363,20 +367,6 @@ class PaymentServiceTest : ShouldSpec({
         verify(paymentRepository, times(0)).save(anyVararg(Payment::class))
     }
 
-    should("throw PaymentUpdateAccessException when updating payment and user is not payment Creator") {
-        // given
-        val payment = createPayment(id = PAYMENT_ID, groupId = GROUP_ID, creatorId = OTHER_USER_ID)
-        val paymentUpdate = createPaymentUpdate(id = PAYMENT_ID, groupId = GROUP_ID, userId = USER_ID)
-        val group = createGroup(currencies = createCurrencies(CURRENCY_1, CURRENCY_2))
-
-        whenever(paymentRepository.findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)).thenReturn(payment)
-
-        // when & then
-        shouldThrowExactly<PaymentUpdateAccessException> { paymentService.updatePayment(group, paymentUpdate) }
-        verify(paymentRepository, times(1)).findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)
-        verify(paymentRepository, times(0)).save(anyVararg(Payment::class))
-    }
-
     context("throw ValidatorsException when updating exception cause:") {
         withData(
             nameFn = { it.first },
@@ -395,6 +385,18 @@ class PaymentServiceTest : ShouldSpec({
             ),
             Quadruple(TARGET_CURRENCY_NOT_IN_GROUP_CURRENCIES, createPaymentUpdate(), arrayOf(CURRENCY_1), arrayOf(CURRENCY_1, CURRENCY_2)),
             Quadruple(BASE_CURRENCY_NOT_AVAILABLE, createPaymentUpdate(), arrayOf(CURRENCY_1, CURRENCY_2), arrayOf(CURRENCY_2)),
+            Quadruple(
+                USER_NOT_CREATOR,
+                createPaymentUpdate(userId = OTHER_USER_ID),
+                arrayOf(CURRENCY_1, CURRENCY_2),
+                arrayOf(CURRENCY_1, CURRENCY_2),
+            ),
+            Quadruple(
+                NO_MODIFICATION,
+                createPaymentUpdateFromPayment(createPayment(id = PAYMENT_ID, groupId = GROUP_ID, creatorId = USER_ID)),
+                arrayOf(CURRENCY_1, CURRENCY_2),
+                arrayOf(CURRENCY_1, CURRENCY_2),
+            ),
 
         ) { (expectedMessage, paymentUpdate, groupCurrencies, availableCurrencies) ->
             // given
@@ -408,20 +410,6 @@ class PaymentServiceTest : ShouldSpec({
             shouldThrowWithMessage<ValidatorsException>("Failed validations: $expectedMessage") { paymentService.updatePayment(group, paymentUpdate) }
             verify(paymentRepository, times(0)).save(anyVararg(Payment::class))
         }
-    }
-
-    should("throw NoPaymentUpdateException when updating payment and update doesn't change anything") {
-        // given
-        val payment = createPayment(id = PAYMENT_ID, groupId = GROUP_ID, creatorId = USER_ID)
-        val paymentUpdate = createPaymentUpdateFromPayment(payment)
-        val group = createGroup(currencies = createCurrencies(CURRENCY_1, CURRENCY_2))
-
-        whenever(paymentRepository.findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)).thenReturn(payment)
-
-        // when & then
-        shouldThrowExactly<NoPaymentUpdateException> { paymentService.updatePayment(group, paymentUpdate) }
-        verify(paymentRepository, times(1)).findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)
-        verify(paymentRepository, times(0)).save(anyVararg(Payment::class))
     }
 },)
 

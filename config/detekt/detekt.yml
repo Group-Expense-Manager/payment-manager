@@ -531,7 +531,7 @@ style:
     active: true
   DestructuringDeclarationWithTooManyEntries:
     active: true
-    maxDestructuringEntries: 4
+    maxDestructuringEntries: 5
   DoubleNegativeLambda:
     active: true
     negativeFunctions:

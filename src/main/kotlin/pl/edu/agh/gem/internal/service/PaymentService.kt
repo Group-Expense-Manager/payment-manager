@@ -15,17 +15,20 @@ import pl.edu.agh.gem.internal.model.payment.PaymentStatus.PENDING
 import pl.edu.agh.gem.internal.model.payment.PaymentUpdate
 import pl.edu.agh.gem.internal.persistence.ArchivedPaymentRepository
 import pl.edu.agh.gem.internal.persistence.PaymentRepository
+import pl.edu.agh.gem.validation.CreatorData
+import pl.edu.agh.gem.validation.CreatorValidator
 import pl.edu.agh.gem.validation.CurrenciesValidator
 import pl.edu.agh.gem.validation.CurrencyData
 import pl.edu.agh.gem.validation.creation.PaymentCreationDataWrapper
 import pl.edu.agh.gem.validation.creation.RecipientValidator
 import pl.edu.agh.gem.validation.decision.DecisionValidator
 import pl.edu.agh.gem.validation.decision.PaymentDecisionDataWrapper
+import pl.edu.agh.gem.validation.delete.PaymentDeletionDataWrapper
+import pl.edu.agh.gem.validation.update.ModificationValidator
 import pl.edu.agh.gem.validation.update.PaymentUpdateDataWrapper
 import pl.edu.agh.gem.validator.ValidatorsException
 import pl.edu.agh.gem.validator.alsoValidate
 import pl.edu.agh.gem.validator.validate
-import java.math.BigDecimal
 import java.time.Instant
 import java.time.Instant.now
 
@@ -41,6 +44,8 @@ class PaymentService(
     val recipientValidator = RecipientValidator()
     val currenciesValidator = CurrenciesValidator()
     val decisionValidator = DecisionValidator()
+    val creatorValidator = CreatorValidator()
+    val modificationValidator = ModificationValidator()
 
     fun getGroup(groupId: String): GroupData {
         return groupManagerClient.getGroup(groupId)
@@ -118,90 +123,74 @@ class PaymentService(
     fun deletePayment(paymentId: String, groupId: String, userId: String) {
         val paymentToDelete = paymentRepository.findByPaymentIdAndGroupId(paymentId, groupId) ?: throw MissingPaymentException(paymentId, groupId)
 
-        if (!userId.isCreator(paymentToDelete)) {
-            throw PaymentDeletionAccessException(userId, paymentId)
-        }
+        val dataWrapper = PaymentDeletionDataWrapper(
+            creatorData = CreatorData(
+                creatorId = paymentToDelete.creatorId,
+                userId = userId,
+            ),
+        )
+        validate(dataWrapper, creatorValidator)
+            .takeIf { it.isNotEmpty() }
+            ?.also { throw ValidatorsException(it) }
 
         paymentRepository.delete(paymentToDelete)
         archivedPaymentRepository.add(paymentToDelete)
     }
 
-    private fun String.isCreator(payment: Payment) = payment.creatorId == this
-
     fun updatePayment(groupData: GroupData, update: PaymentUpdate): Payment {
         val originalPayment = paymentRepository.findByPaymentIdAndGroupId(update.id, update.groupId)
             ?: throw MissingPaymentException(update.id, update.groupId)
 
-        if (!update.userId.isCreator(originalPayment)) {
-            throw PaymentUpdateAccessException(update.userId, update.id)
-        }
-
-        if (!update.modifies(originalPayment)) {
-            throw NoPaymentUpdateException(update.userId, update.id)
-        }
-
-        val partiallyUpdatedPayment = originalPayment.update(update)
-
-        val dataWrapper = PaymentUpdateDataWrapper(
-            CurrencyData(
-                groupData.currencies,
-                currencyManagerClient.getAvailableCurrencies(),
-                update.amount.currency,
-                update.targetCurrency,
-            ),
+        val dataWrapper = createPaymentUpdateDataWrapper(
+            originalPayment = originalPayment,
+            paymentUpdate = update,
+            groupData = groupData,
         )
 
-        validate(dataWrapper, currenciesValidator)
+        validate(dataWrapper, creatorValidator)
+            .alsoValidate(dataWrapper, modificationValidator)
+            .alsoValidate(dataWrapper, currenciesValidator)
             .takeIf { it.isNotEmpty() }
             ?.also { throw ValidatorsException(it) }
 
         return paymentRepository.save(
-            partiallyUpdatedPayment.copy(
+            originalPayment.copy(
+                title = update.title,
+                type = update.type,
+                amount = update.amount,
                 fxData = getFxData(
                     update.amount.currency,
                     update.targetCurrency,
                     update.date,
                 ),
+                date = update.date,
+                updatedAt = now(),
+                status = PENDING,
+                history = originalPayment.history + PaymentHistoryEntry(originalPayment.creatorId, EDITED, now(), update.message),
+
             ),
         )
     }
 
-    private fun PaymentUpdate.modifies(payment: Payment): Boolean {
-        return payment.title != title ||
-            payment.type != type ||
-            payment.amount != amount ||
-            payment.fxData?.targetCurrency != targetCurrency ||
-            payment.date != date
-    }
-
-    private fun Payment.update(paymentUpdate: PaymentUpdate): Payment {
-        return this.copy(
-            title = paymentUpdate.title,
-            type = paymentUpdate.type,
-            amount = paymentUpdate.amount,
-            fxData = paymentUpdate.targetCurrency?.let {
-                FxData(
-                    paymentUpdate.targetCurrency,
-                    BigDecimal.ZERO,
-                )
-            },
-            date = paymentUpdate.date,
-            updatedAt = now(),
-            status = PENDING,
-            history = history + PaymentHistoryEntry(creatorId, EDITED, now(), paymentUpdate.message),
-
-        )
-    }
+    private fun createPaymentUpdateDataWrapper(
+        originalPayment: Payment,
+        paymentUpdate: PaymentUpdate,
+        groupData: GroupData,
+    ) = PaymentUpdateDataWrapper(
+        originalPayment = originalPayment,
+        paymentUpdate = paymentUpdate,
+        currencyData = CurrencyData(
+            groupData.currencies,
+            currencyManagerClient.getAvailableCurrencies(),
+            paymentUpdate.amount.currency,
+            paymentUpdate.targetCurrency,
+        ),
+        creatorData = CreatorData(
+            creatorId = originalPayment.creatorId,
+            userId = paymentUpdate.userId,
+        ),
+    )
 }
 
 class MissingPaymentException(paymentId: String, groupId: String) :
     RuntimeException("Failed to find payment with id: $paymentId and groupId: $groupId")
-
-class PaymentDeletionAccessException(userId: String, paymentId: String) :
-    RuntimeException("User with id: $userId can not delete payment with id: $paymentId")
-
-class PaymentUpdateAccessException(userId: String, paymentId: String) :
-    RuntimeException("User with id: $userId can not update payment with id: $paymentId")
-
-class NoPaymentUpdateException(userId: String, paymentId: String) :
-    RuntimeException("No update occurred for payment with id: $paymentId by user with id: $userId")
