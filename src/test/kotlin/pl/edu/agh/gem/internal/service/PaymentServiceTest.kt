@@ -27,6 +27,7 @@ import pl.edu.agh.gem.internal.model.attachment.GroupAttachment
 import pl.edu.agh.gem.internal.model.payment.Payment
 import pl.edu.agh.gem.internal.model.payment.PaymentAction.CREATED
 import pl.edu.agh.gem.internal.model.payment.PaymentAction.EDITED
+import pl.edu.agh.gem.internal.model.payment.PaymentStatus.ACCEPTED
 import pl.edu.agh.gem.internal.model.payment.PaymentStatus.PENDING
 import pl.edu.agh.gem.internal.persistence.ArchivedPaymentRepository
 import pl.edu.agh.gem.internal.persistence.PaymentRepository
@@ -439,6 +440,22 @@ class PaymentServiceTest : ShouldSpec({
         // then
         result shouldBe listOf()
         verify(paymentRepository, times(1)).findByGroupId(GROUP_ID, filterOptions)
+    }
+
+    should("get accepted payments") {
+        // given
+        val acceptedPayment = createPayment(status = ACCEPTED)
+        whenever(paymentRepository.findByGroupId(eq(GROUP_ID), any())).thenReturn(listOf(acceptedPayment))
+
+        // when
+        val result = paymentService.getAcceptedPayments(GROUP_ID)
+
+        // then
+        result.also {
+            it shouldHaveSize 1
+            it.first() shouldBe acceptedPayment
+        }
+        verify(paymentRepository, times(1)).findByGroupId(eq(GROUP_ID), any())
     }
 },)
 

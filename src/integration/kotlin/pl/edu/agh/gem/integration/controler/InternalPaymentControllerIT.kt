@@ -6,14 +6,19 @@ import io.kotest.matchers.shouldBe
 import org.springframework.http.HttpStatus.OK
 import pl.edu.agh.gem.assertion.shouldBody
 import pl.edu.agh.gem.assertion.shouldHaveHttpStatus
+import pl.edu.agh.gem.dto.GroupMemberResponse
+import pl.edu.agh.gem.dto.GroupMembersResponse
+import pl.edu.agh.gem.external.dto.payment.AcceptedGroupPaymentsResponse
 import pl.edu.agh.gem.external.dto.payment.GroupActivitiesResponse
 import pl.edu.agh.gem.external.dto.payment.toAmountDto
+import pl.edu.agh.gem.external.dto.payment.toDto
 import pl.edu.agh.gem.helper.group.DummyGroup.GROUP_ID
 import pl.edu.agh.gem.helper.group.DummyGroup.OTHER_GROUP_ID
 import pl.edu.agh.gem.helper.user.DummyUser.USER_ID
 import pl.edu.agh.gem.helper.user.createGemUser
 import pl.edu.agh.gem.integration.BaseIntegrationSpec
 import pl.edu.agh.gem.integration.ability.ServiceTestClient
+import pl.edu.agh.gem.integration.ability.stubGroupManagerUserGroups
 import pl.edu.agh.gem.internal.model.payment.PaymentStatus.ACCEPTED
 import pl.edu.agh.gem.internal.model.payment.PaymentStatus.PENDING
 import pl.edu.agh.gem.internal.model.payment.PaymentStatus.REJECTED
@@ -208,6 +213,34 @@ class InternalPaymentControllerIT(
             groupId shouldBe GROUP_ID
             payments shouldHaveSize 3
             payments.map { it.paymentId } shouldContainExactly listOf(payment2.id, payment1.id, payment3.id)
+        }
+    }
+
+    should("get accepted group payments") {
+        // given
+        val groupMembers = GroupMembersResponse(listOf(GroupMemberResponse(USER_ID)))
+        stubGroupManagerUserGroups(groupMembers, GROUP_ID)
+        val payment = createPayment(id = "1", status = ACCEPTED)
+
+        paymentRepository.save(payment)
+        paymentRepository.save(createPayment(id = "2", status = PENDING))
+
+        // when
+        val response = service.getAcceptedGroupPayments(GROUP_ID)
+
+        // then
+        response shouldHaveHttpStatus OK
+        response.shouldBody<AcceptedGroupPaymentsResponse> {
+            groupId shouldBe GROUP_ID
+            payments shouldHaveSize 1
+            payments.first().also {
+                it.creatorId shouldBe payment.creatorId
+                it.recipientId shouldBe payment.recipientId
+                it.title shouldBe payment.title
+                it.amount shouldBe payment.amount.toAmountDto()
+                it.fxData shouldBe payment.fxData?.toDto()
+                it.date shouldBe payment.date
+            }
         }
     }
 },)

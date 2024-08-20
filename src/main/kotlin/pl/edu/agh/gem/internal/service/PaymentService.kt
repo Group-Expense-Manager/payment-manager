@@ -11,9 +11,12 @@ import pl.edu.agh.gem.internal.model.payment.PaymentAction.EDITED
 import pl.edu.agh.gem.internal.model.payment.PaymentCreation
 import pl.edu.agh.gem.internal.model.payment.PaymentDecision
 import pl.edu.agh.gem.internal.model.payment.PaymentHistoryEntry
+import pl.edu.agh.gem.internal.model.payment.PaymentStatus.ACCEPTED
 import pl.edu.agh.gem.internal.model.payment.PaymentStatus.PENDING
 import pl.edu.agh.gem.internal.model.payment.PaymentUpdate
 import pl.edu.agh.gem.internal.model.payment.filter.FilterOptions
+import pl.edu.agh.gem.internal.model.payment.filter.SortOrder.ASCENDING
+import pl.edu.agh.gem.internal.model.payment.filter.SortedBy.DATE
 import pl.edu.agh.gem.internal.persistence.ArchivedPaymentRepository
 import pl.edu.agh.gem.internal.persistence.PaymentRepository
 import pl.edu.agh.gem.validation.CreatorData
@@ -47,6 +50,12 @@ class PaymentService(
     val decisionValidator = DecisionValidator()
     val creatorValidator = CreatorValidator()
     val modificationValidator = ModificationValidator()
+
+    val acceptedPaymentsFilterOptions = FilterOptions(
+        status = ACCEPTED,
+        sortedBy = DATE,
+        sortOrder = ASCENDING,
+    )
 
     fun getGroup(groupId: String): GroupData {
         return groupManagerClient.getGroup(groupId)
@@ -194,6 +203,10 @@ class PaymentService(
 
     fun getGroupActivities(groupId: String, filterOptions: FilterOptions): List<Payment> {
         return paymentRepository.findByGroupId(groupId, filterOptions)
+    }
+
+    fun getAcceptedPayments(groupId: String): List<Payment> {
+        return paymentRepository.findByGroupId(groupId, acceptedPaymentsFilterOptions)
     }
 }
 
