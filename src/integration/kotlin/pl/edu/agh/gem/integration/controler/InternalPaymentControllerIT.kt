@@ -2,6 +2,7 @@ package pl.edu.agh.gem.integration.controler
 
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import org.springframework.http.HttpStatus.OK
 import pl.edu.agh.gem.assertion.shouldBody
@@ -10,10 +11,12 @@ import pl.edu.agh.gem.dto.GroupMemberResponse
 import pl.edu.agh.gem.dto.GroupMembersResponse
 import pl.edu.agh.gem.external.dto.payment.AcceptedGroupPaymentsResponse
 import pl.edu.agh.gem.external.dto.payment.GroupActivitiesResponse
+import pl.edu.agh.gem.external.dto.payment.UserBalanceResponse
 import pl.edu.agh.gem.external.dto.payment.toAmountDto
 import pl.edu.agh.gem.external.dto.payment.toDto
 import pl.edu.agh.gem.helper.group.DummyGroup.GROUP_ID
 import pl.edu.agh.gem.helper.group.DummyGroup.OTHER_GROUP_ID
+import pl.edu.agh.gem.helper.user.DummyUser.OTHER_USER_ID
 import pl.edu.agh.gem.helper.user.DummyUser.USER_ID
 import pl.edu.agh.gem.helper.user.createGemUser
 import pl.edu.agh.gem.integration.BaseIntegrationSpec
@@ -27,6 +30,11 @@ import pl.edu.agh.gem.internal.model.payment.filter.SortOrder.DESCENDING
 import pl.edu.agh.gem.internal.model.payment.filter.SortedBy.DATE
 import pl.edu.agh.gem.internal.model.payment.filter.SortedBy.TITLE
 import pl.edu.agh.gem.internal.persistence.PaymentRepository
+import pl.edu.agh.gem.util.DummyData.ANOTHER_USER_ID
+import pl.edu.agh.gem.util.DummyData.CURRENCY_1
+import pl.edu.agh.gem.util.DummyData.CURRENCY_2
+import pl.edu.agh.gem.util.createAmount
+import pl.edu.agh.gem.util.createFxData
 import pl.edu.agh.gem.util.createPayment
 import java.time.Instant.ofEpochMilli
 
@@ -240,6 +248,65 @@ class InternalPaymentControllerIT(
                 it.amount shouldBe payment.amount.toAmountDto()
                 it.fxData shouldBe payment.fxData?.toDto()
                 it.date shouldBe payment.date
+            }
+        }
+    }
+
+    should("get user balance") {
+        // given
+        val payments = listOf(
+            createPayment(
+                id = "1",
+                status = ACCEPTED,
+                creatorId = USER_ID,
+                recipientId = OTHER_USER_ID,
+                amount = createAmount(
+                    value = 50.toBigDecimal(),
+                    currency = CURRENCY_1,
+                ),
+                fxData = createFxData(
+                    targetCurrency = CURRENCY_2,
+                    exchangeRate = "1.5".toBigDecimal(),
+                ),
+            ),
+            createPayment(
+                id = "2",
+                status = ACCEPTED,
+                creatorId = OTHER_USER_ID,
+                recipientId = USER_ID,
+                amount = createAmount(
+                    value = 50.toBigDecimal(),
+                    currency = CURRENCY_1,
+                ),
+                fxData = null,
+            ),
+            createPayment(
+                id = "3",
+                status = ACCEPTED,
+                creatorId = OTHER_USER_ID,
+                recipientId = ANOTHER_USER_ID,
+            ),
+
+        )
+        payments.forEach { paymentRepository.save(it) }
+
+        // when
+        val response = service.getUserBalance(GROUP_ID, USER_ID)
+
+        // then
+        response shouldHaveHttpStatus OK
+        response.shouldBody<UserBalanceResponse> {
+            userId shouldBe USER_ID
+            elements.size shouldBe 2
+            elements.first().also { elem ->
+                elem.value shouldBe payments.first().amount.value
+                elem.currency shouldBe payments.first().fxData?.targetCurrency
+                elem.exchangeRate shouldBe payments.first().fxData?.exchangeRate
+            }
+            elements.last().also { elem ->
+                elem.value shouldBe payments[1].amount.value.negate()
+                elem.currency shouldBe payments[1].amount.currency
+                elem.exchangeRate.shouldBeNull()
             }
         }
     }

@@ -4,7 +4,9 @@ import org.springframework.stereotype.Service
 import pl.edu.agh.gem.internal.client.AttachmentStoreClient
 import pl.edu.agh.gem.internal.client.CurrencyManagerClient
 import pl.edu.agh.gem.internal.client.GroupManagerClient
+import pl.edu.agh.gem.internal.mapper.BalanceElementMapper
 import pl.edu.agh.gem.internal.model.group.GroupData
+import pl.edu.agh.gem.internal.model.payment.BalanceElement
 import pl.edu.agh.gem.internal.model.payment.FxData
 import pl.edu.agh.gem.internal.model.payment.Payment
 import pl.edu.agh.gem.internal.model.payment.PaymentAction.EDITED
@@ -50,6 +52,8 @@ class PaymentService(
     val decisionValidator = DecisionValidator()
     val creatorValidator = CreatorValidator()
     val modificationValidator = ModificationValidator()
+
+    val balanceElementMapper = BalanceElementMapper()
 
     val acceptedPaymentsFilterOptions = FilterOptions(
         status = ACCEPTED,
@@ -205,8 +209,13 @@ class PaymentService(
         return paymentRepository.findByGroupId(groupId, filterOptions)
     }
 
-    fun getAcceptedPayments(groupId: String): List<Payment> {
+    fun getAcceptedGroupPayments(groupId: String): List<Payment> {
         return paymentRepository.findByGroupId(groupId, acceptedPaymentsFilterOptions)
+    }
+
+    fun getUserBalance(groupId: String, userId: String): List<BalanceElement> {
+        return paymentRepository.findByGroupId(groupId, acceptedPaymentsFilterOptions)
+            .mapNotNull { balanceElementMapper.mapToBalanceElement(userId = userId, payment = it) }
     }
 }
 
