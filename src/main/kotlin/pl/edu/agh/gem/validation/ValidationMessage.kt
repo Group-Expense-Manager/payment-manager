@@ -23,4 +23,7 @@ object ValidationMessage {
     const val GROUP_ID_NOT_BLANK = "Group id can not be blank"
 
     const val USER_NOT_RECIPIENT = "Only recipient can submit decision"
+
+    const val NO_MODIFICATION = "Update does not change anything"
+    const val USER_NOT_CREATOR = "Only creator can update payment"
 }

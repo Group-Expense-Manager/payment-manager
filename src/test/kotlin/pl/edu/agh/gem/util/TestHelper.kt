@@ -11,6 +11,8 @@ import pl.edu.agh.gem.external.dto.group.UserGroupsResponse
 import pl.edu.agh.gem.external.dto.payment.AmountDto
 import pl.edu.agh.gem.external.dto.payment.PaymentCreationRequest
 import pl.edu.agh.gem.external.dto.payment.PaymentDecisionRequest
+import pl.edu.agh.gem.external.dto.payment.PaymentUpdateRequest
+import pl.edu.agh.gem.external.dto.payment.toAmountDto
 import pl.edu.agh.gem.external.persistence.PaymentEntity
 import pl.edu.agh.gem.helper.group.DummyGroup.GROUP_ID
 import pl.edu.agh.gem.helper.group.DummyGroup.OTHER_GROUP_ID
@@ -33,6 +35,8 @@ import pl.edu.agh.gem.internal.model.payment.PaymentStatus
 import pl.edu.agh.gem.internal.model.payment.PaymentStatus.PENDING
 import pl.edu.agh.gem.internal.model.payment.PaymentType
 import pl.edu.agh.gem.internal.model.payment.PaymentType.CASH
+import pl.edu.agh.gem.internal.model.payment.PaymentType.OTHER
+import pl.edu.agh.gem.internal.model.payment.PaymentUpdate
 import pl.edu.agh.gem.model.GroupMembers
 import pl.edu.agh.gem.util.DummyData.ATTACHMENT_ID
 import pl.edu.agh.gem.util.DummyData.CURRENCY_1
@@ -262,6 +266,68 @@ fun createPaymentDecision(
     message = message,
 )
 
+fun createPaymentUpdateRequest(
+    title: String = "My Edited Payment",
+    type: PaymentType = OTHER,
+    amount: AmountDto = createAmountDto(),
+    targetCurrency: String? = CURRENCY_2,
+    date: Instant = Instant.ofEpochMilli(0L),
+    message: String? = "edited",
+) = PaymentUpdateRequest(
+    title = title,
+    type = type,
+    amount = amount,
+    targetCurrency = targetCurrency,
+    date = date,
+    message = message,
+)
+
+fun createPaymentUpdate(
+    id: String = PAYMENT_ID,
+    groupId: String = GROUP_ID,
+    userId: String = USER_ID,
+    title: String = "Some modified title",
+    type: PaymentType = OTHER,
+    amount: Amount = createAmount(),
+    targetCurrency: String? = CURRENCY_2,
+    date: Instant = Instant.ofEpochMilli(0L),
+    message: String? = "Something",
+) = PaymentUpdate(
+    id = id,
+    groupId = groupId,
+    userId = userId,
+    title = title,
+    type = type,
+    amount = amount,
+    targetCurrency = targetCurrency,
+    date = date,
+    message = message,
+)
+
+fun createPaymentUpdateFromPayment(
+    payment: Payment,
+) = PaymentUpdate(
+    id = payment.id,
+    groupId = payment.groupId,
+    userId = payment.creatorId,
+    title = payment.title,
+    type = payment.type,
+    amount = payment.amount,
+    targetCurrency = payment.fxData?.targetCurrency,
+    date = payment.date,
+    message = null,
+)
+
+fun createPaymentUpdateRequestFromPayment(
+    payment: Payment,
+) = PaymentUpdateRequest(
+    title = payment.title,
+    type = payment.type,
+    amount = payment.amount.toAmountDto(),
+    targetCurrency = payment.fxData?.targetCurrency,
+    date = payment.date,
+    message = null,
+)
 object DummyData {
     const val PAYMENT_ID = "paymentId"
     const val CURRENCY_1 = "PLN"

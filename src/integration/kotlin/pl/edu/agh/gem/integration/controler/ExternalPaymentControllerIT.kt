@@ -16,7 +16,9 @@ import pl.edu.agh.gem.assertion.shouldHaveHttpStatus
 import pl.edu.agh.gem.assertion.shouldHaveValidationError
 import pl.edu.agh.gem.assertion.shouldHaveValidatorError
 import pl.edu.agh.gem.exception.UserWithoutGroupAccessException
+import pl.edu.agh.gem.external.dto.group.CurrencyDTO
 import pl.edu.agh.gem.external.dto.payment.PaymentResponse
+import pl.edu.agh.gem.external.dto.payment.PaymentUpdateResponse
 import pl.edu.agh.gem.external.dto.payment.toAmountDto
 import pl.edu.agh.gem.helper.group.DummyGroup.GROUP_ID
 import pl.edu.agh.gem.helper.group.DummyGroup.OTHER_GROUP_ID
@@ -31,9 +33,10 @@ import pl.edu.agh.gem.integration.ability.stubCurrencyManagerAvailableCurrencies
 import pl.edu.agh.gem.integration.ability.stubCurrencyManagerExchangeRate
 import pl.edu.agh.gem.integration.ability.stubGroupManagerGroupData
 import pl.edu.agh.gem.integration.ability.stubGroupManagerUserGroups
+import pl.edu.agh.gem.internal.model.payment.PaymentAction.EDITED
+import pl.edu.agh.gem.internal.model.payment.PaymentStatus.PENDING
 import pl.edu.agh.gem.internal.persistence.PaymentRepository
 import pl.edu.agh.gem.internal.service.MissingPaymentException
-import pl.edu.agh.gem.internal.service.PaymentDeletionAccessException
 import pl.edu.agh.gem.internal.service.Quadruple
 import pl.edu.agh.gem.util.DummyData.ANOTHER_USER_ID
 import pl.edu.agh.gem.util.DummyData.CURRENCY_1
@@ -50,6 +53,8 @@ import pl.edu.agh.gem.util.createMembersDTO
 import pl.edu.agh.gem.util.createPayment
 import pl.edu.agh.gem.util.createPaymentCreationRequest
 import pl.edu.agh.gem.util.createPaymentDecisionRequest
+import pl.edu.agh.gem.util.createPaymentUpdateRequest
+import pl.edu.agh.gem.util.createPaymentUpdateRequestFromPayment
 import pl.edu.agh.gem.util.createUserGroupsResponse
 import pl.edu.agh.gem.validation.ValidationMessage.ATTACHMENT_ID_NULL_OR_NOT_BLANK
 import pl.edu.agh.gem.validation.ValidationMessage.BASE_CURRENCY_EQUAL_TO_TARGET_CURRENCY
@@ -59,6 +64,7 @@ import pl.edu.agh.gem.validation.ValidationMessage.BASE_CURRENCY_NOT_IN_GROUP_CU
 import pl.edu.agh.gem.validation.ValidationMessage.BASE_CURRENCY_PATTERN
 import pl.edu.agh.gem.validation.ValidationMessage.GROUP_ID_NOT_BLANK
 import pl.edu.agh.gem.validation.ValidationMessage.MESSAGE_NULL_OR_NOT_BLANK
+import pl.edu.agh.gem.validation.ValidationMessage.NO_MODIFICATION
 import pl.edu.agh.gem.validation.ValidationMessage.PAYMENT_ID_NOT_BLANK
 import pl.edu.agh.gem.validation.ValidationMessage.POSITIVE_AMOUNT
 import pl.edu.agh.gem.validation.ValidationMessage.RECIPIENT_ID_NOT_BLANK
@@ -68,6 +74,7 @@ import pl.edu.agh.gem.validation.ValidationMessage.TARGET_CURRENCY_NOT_IN_GROUP_
 import pl.edu.agh.gem.validation.ValidationMessage.TARGET_CURRENCY_PATTERN
 import pl.edu.agh.gem.validation.ValidationMessage.TITLE_MAX_LENGTH
 import pl.edu.agh.gem.validation.ValidationMessage.TITLE_NOT_BLANK
+import pl.edu.agh.gem.validation.ValidationMessage.USER_NOT_CREATOR
 import pl.edu.agh.gem.validation.ValidationMessage.USER_NOT_RECIPIENT
 import java.math.BigDecimal
 
@@ -396,10 +403,178 @@ class ExternalPaymentControllerIT(
         val response = service.delete(createGemUser(USER_ID, EMAIL), GROUP_ID, PAYMENT_ID)
 
         // then
+        response shouldHaveHttpStatus BAD_REQUEST
+        response shouldHaveValidatorError USER_NOT_CREATOR
+    }
+
+    context("return validation exception when updating payment cause:") {
+        withData(
+            nameFn = { it.first },
+            Pair(TITLE_NOT_BLANK, createPaymentUpdateRequest(title = "")),
+            Pair(
+                TITLE_MAX_LENGTH,
+                createPaymentUpdateRequest(title = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+            ),
+            Pair(POSITIVE_AMOUNT, createPaymentUpdateRequest(amount = createAmountDto(value = BigDecimal.ZERO))),
+            Pair(BASE_CURRENCY_NOT_BLANK, createPaymentUpdateRequest(amount = createAmountDto(currency = ""))),
+            Pair(BASE_CURRENCY_PATTERN, createPaymentUpdateRequest(amount = createAmountDto(currency = "pln"))),
+            Pair(TARGET_CURRENCY_PATTERN, createPaymentUpdateRequest(targetCurrency = "pln")),
+            Pair(MESSAGE_NULL_OR_NOT_BLANK, createPaymentUpdateRequest(message = "")),
+        ) { (expectedMessage, paymentUpdateRequest) ->
+            // when
+            val response = service.updatePayment(paymentUpdateRequest, createGemUser(), GROUP_ID, PAYMENT_ID)
+
+            // then
+            response shouldHaveHttpStatus BAD_REQUEST
+            response shouldHaveValidationError expectedMessage
+        }
+    }
+
+    should("not update payment when user doesn't have access") {
+        // given
+        val user = createGemUser()
+        val paymentUpdateRequest = createPaymentUpdateRequest()
+        stubGroupManagerGroupData(createGroupResponse(members = createMembersDTO(OTHER_USER_ID)), GROUP_ID)
+
+        // when
+        val response = service.updatePayment(paymentUpdateRequest, user, GROUP_ID, PAYMENT_ID)
+
+        // then
         response shouldHaveHttpStatus FORBIDDEN
+    }
+
+    should("return not found when updating payment and payment is not present") {
+        // given
+        val paymentUpdateRequest = createPaymentUpdateRequest()
+        stubGroupManagerGroupData(createGroupResponse(members = createMembersDTO(USER_ID, OTHER_USER_ID)), GROUP_ID)
+
+        // when
+        val response = service.updatePayment(paymentUpdateRequest, createGemUser(USER_ID), GROUP_ID, PAYMENT_ID)
+
+        // then
+        response shouldHaveHttpStatus NOT_FOUND
         response shouldHaveErrors {
             errors shouldHaveSize 1
-            errors.first().code shouldBe PaymentDeletionAccessException::class.simpleName
+            errors.first().code shouldBe MissingPaymentException::class.simpleName
+        }
+    }
+    context("return validator exception when updating exception cause:") {
+        withData(
+            nameFn = { it.first },
+            Quintuple(
+                BASE_CURRENCY_NOT_IN_GROUP_CURRENCIES,
+                createPaymentUpdateRequest(targetCurrency = null),
+                listOf(),
+                arrayOf(CURRENCY_1, CURRENCY_2),
+                USER_ID,
+            ),
+            Quintuple(
+                BASE_CURRENCY_EQUAL_TO_TARGET_CURRENCY,
+                createPaymentUpdateRequest(amount = createAmountDto(currency = CURRENCY_1), targetCurrency = CURRENCY_1),
+                listOf(CURRENCY_1, CURRENCY_2),
+                arrayOf(CURRENCY_1, CURRENCY_2),
+                USER_ID,
+            ),
+            Quintuple(
+                TARGET_CURRENCY_NOT_IN_GROUP_CURRENCIES,
+                createPaymentUpdateRequest(),
+                listOf(CURRENCY_1),
+                arrayOf(CURRENCY_1, CURRENCY_2),
+                USER_ID,
+            ),
+            Quintuple(
+                BASE_CURRENCY_NOT_AVAILABLE,
+                createPaymentUpdateRequest(),
+                listOf(CURRENCY_1, CURRENCY_2),
+                arrayOf(CURRENCY_2),
+                USER_ID,
+            ),
+            Quintuple(
+                NO_MODIFICATION,
+                createPaymentUpdateRequestFromPayment(createPayment(id = PAYMENT_ID, groupId = GROUP_ID, creatorId = USER_ID)),
+                listOf(CURRENCY_1, CURRENCY_2),
+                arrayOf(CURRENCY_1, CURRENCY_2),
+                USER_ID,
+            ),
+            Quintuple(
+                USER_NOT_CREATOR,
+                createPaymentUpdateRequest(),
+                listOf(CURRENCY_1, CURRENCY_2),
+                arrayOf(CURRENCY_2),
+                OTHER_USER_ID,
+            ),
+
+        ) { (expectedMessage, updatePaymentRequest, groupCurrencies, availableCurrencies, creatorId) ->
+
+            // given
+            val payment = createPayment(id = PAYMENT_ID, groupId = GROUP_ID, creatorId = creatorId)
+            paymentRepository.save(payment)
+            stubGroupManagerGroupData(
+                createGroupResponse(createMembersDTO(USER_ID, OTHER_USER_ID), groupCurrencies = groupCurrencies.map { CurrencyDTO(it) }),
+                GROUP_ID,
+            )
+            stubCurrencyManagerAvailableCurrencies(createCurrenciesResponse(*availableCurrencies))
+
+            // when
+            val response = service.updatePayment(updatePaymentRequest, createGemUser(USER_ID), GROUP_ID, PAYMENT_ID)
+
+            // then
+            response shouldHaveHttpStatus BAD_REQUEST
+            response shouldHaveValidatorError expectedMessage
+        }
+    }
+
+    should("update payment") {
+        // given
+        val payment = createPayment(id = PAYMENT_ID, groupId = GROUP_ID, creatorId = USER_ID)
+        val paymentUpdateRequest = createPaymentUpdateRequest(amount = createAmountDto(value = "6".toBigDecimal()))
+        paymentRepository.save(payment)
+        stubGroupManagerGroupData(createGroupResponse(members = createMembersDTO(USER_ID, OTHER_USER_ID, ANOTHER_USER_ID)), GROUP_ID)
+        stubCurrencyManagerAvailableCurrencies(createCurrenciesResponse(CURRENCY_1, CURRENCY_2))
+        stubCurrencyManagerExchangeRate(
+            createExchangeRateResponse(value = EXCHANGE_RATE_VALUE),
+            CURRENCY_1,
+            CURRENCY_2,
+        )
+        // when
+        val response = service.updatePayment(paymentUpdateRequest, createGemUser(USER_ID), GROUP_ID, PAYMENT_ID)
+
+        // then
+        response shouldHaveHttpStatus OK
+        response.shouldBody<PaymentUpdateResponse> {
+            paymentId shouldBe PAYMENT_ID
+        }
+        paymentRepository.findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID).also {
+            it.shouldNotBeNull()
+            it.id shouldBe PAYMENT_ID
+            it.groupId shouldBe GROUP_ID
+            it.creatorId shouldBe USER_ID
+            it.title shouldBe paymentUpdateRequest.title
+            it.type shouldBe paymentUpdateRequest.type
+            it.amount shouldBe paymentUpdateRequest.amount.toDomain()
+            it.fxData.also { fxData ->
+                fxData?.targetCurrency shouldBe paymentUpdateRequest.targetCurrency
+                fxData?.exchangeRate shouldBe EXCHANGE_RATE_VALUE
+            }
+            it.createdAt.shouldNotBeNull()
+            it.updatedAt.shouldNotBeNull()
+            it.attachmentId shouldBe payment.attachmentId
+            it.recipientId shouldBe payment.recipientId
+            it.status shouldBe PENDING
+            it.history.last().also { history ->
+                history.participantId shouldBe USER_ID
+                history.createdAt.shouldNotBeNull()
+                history.paymentAction shouldBe EDITED
+                history.comment shouldBe paymentUpdateRequest.message
+            }
         }
     }
 },)
+
+data class Quintuple<A, B, C, D, E>(
+    val first: A,
+    val second: B,
+    val third: C,
+    val fourth: D,
+    val fifth: E,
+)

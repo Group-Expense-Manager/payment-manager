@@ -4,7 +4,7 @@ import pl.edu.agh.gem.internal.model.payment.Payment
 import pl.edu.agh.gem.internal.model.payment.PaymentDecision
 import pl.edu.agh.gem.validator.DataWrapper
 
-data class DecisionDataWrapper(
+data class PaymentDecisionDataWrapper(
     val paymentDecision: PaymentDecision,
     val payment: Payment,
 ) : DataWrapper
