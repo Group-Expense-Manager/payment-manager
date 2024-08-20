@@ -3,6 +3,7 @@ package pl.edu.agh.gem.external.controller
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus.CREATED
 import org.springframework.http.HttpStatus.OK
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -68,6 +69,17 @@ class ExternalPaymentController(
     ) {
         userId.checkIfUserHaveAccess(paymentDecisionRequest.groupId)
         paymentService.decide(paymentDecisionRequest.toDomain(userId))
+    }
+
+    @DeleteMapping("{paymentId}/groups/{groupId}")
+    @ResponseStatus(OK)
+    fun deletePayment(
+        @GemUserId userId: String,
+        @PathVariable paymentId: String,
+        @PathVariable groupId: String,
+    ) {
+        userId.checkIfUserHaveAccess(groupId)
+        paymentService.deletePayment(paymentId, groupId, userId)
     }
 
     private fun String.checkIfUserHaveAccess(groupMembers: GroupMembers) {

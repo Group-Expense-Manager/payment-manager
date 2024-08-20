@@ -10,6 +10,7 @@ import pl.edu.agh.gem.internal.model.payment.Payment
 import pl.edu.agh.gem.internal.model.payment.PaymentCreation
 import pl.edu.agh.gem.internal.model.payment.PaymentDecision
 import pl.edu.agh.gem.internal.model.payment.PaymentHistoryEntry
+import pl.edu.agh.gem.internal.persistence.ArchivedPaymentRepository
 import pl.edu.agh.gem.internal.persistence.PaymentRepository
 import pl.edu.agh.gem.validation.creation.CurrenciesValidator
 import pl.edu.agh.gem.validation.creation.PaymentCreationDataWrapper
@@ -27,6 +28,7 @@ class PaymentService(
     private val currencyManagerClient: CurrencyManagerClient,
     private val attachmentStoreClient: AttachmentStoreClient,
     private val paymentRepository: PaymentRepository,
+    private val archivedPaymentRepository: ArchivedPaymentRepository,
 ) {
 
     private val paymentCreationValidators = validatorsOf(
@@ -104,7 +106,23 @@ class PaymentService(
             history = updatedHistory,
         )
     }
+
+    fun deletePayment(paymentId: String, groupId: String, userId: String) {
+        val paymentToDelete = paymentRepository.findByPaymentIdAndGroupId(paymentId, groupId) ?: throw MissingPaymentException(paymentId, groupId)
+
+        if (!userId.isCreator(paymentToDelete)) {
+            throw PaymentDeletionAccessException(userId, paymentId)
+        }
+
+        paymentRepository.delete(paymentToDelete)
+        archivedPaymentRepository.add(paymentToDelete)
+    }
+
+    private fun String.isCreator(payment: Payment) = payment.creatorId == this
 }
 
 class MissingPaymentException(paymentId: String, groupId: String) :
     RuntimeException("Failed to find payment with id: $paymentId and groupId: $groupId")
+
+class PaymentDeletionAccessException(userId: String, paymentId: String) :
+    RuntimeException("User with id: $userId can not delete payment with id: $paymentId")
