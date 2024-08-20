@@ -1,5 +1,6 @@
 package pl.edu.agh.gem.internal.service
 
+import io.kotest.assertions.throwables.shouldThrowExactly
 import io.kotest.assertions.throwables.shouldThrowWithMessage
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.datatest.withData
@@ -27,10 +28,12 @@ import pl.edu.agh.gem.util.DummyData.ANOTHER_USER_ID
 import pl.edu.agh.gem.util.DummyData.ATTACHMENT_ID
 import pl.edu.agh.gem.util.DummyData.CURRENCY_1
 import pl.edu.agh.gem.util.DummyData.CURRENCY_2
+import pl.edu.agh.gem.util.DummyData.PAYMENT_ID
 import pl.edu.agh.gem.util.createAmount
 import pl.edu.agh.gem.util.createCurrencies
 import pl.edu.agh.gem.util.createExchangeRate
 import pl.edu.agh.gem.util.createGroup
+import pl.edu.agh.gem.util.createPayment
 import pl.edu.agh.gem.util.createPaymentCreation
 import pl.edu.agh.gem.validation.ValidationMessage.BASE_CURRENCY_EQUAL_TO_TARGET_CURRENCY
 import pl.edu.agh.gem.validation.ValidationMessage.BASE_CURRENCY_NOT_AVAILABLE
@@ -185,6 +188,28 @@ class PaymentServiceTest : ShouldSpec({
             }
             verify(paymentRepository, times(0)).save(anyVararg(Payment::class))
         }
+    }
+
+    should("get payment") {
+        // given
+        val payment = createPayment()
+        whenever(paymentRepository.findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)).thenReturn(payment)
+
+        // when
+        val result = paymentService.getPayment(PAYMENT_ID, GROUP_ID)
+
+        // then
+        result shouldBe payment
+        verify(paymentRepository, times(1)).findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)
+    }
+
+    should("throw MissingPaymentException when there is no payment for given id & groupId") {
+        // given
+        whenever(paymentRepository.findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)).thenReturn(null)
+
+        // when & then
+        shouldThrowExactly<MissingPaymentException> { paymentService.getPayment(PAYMENT_ID, GROUP_ID) }
+        verify(paymentRepository, times(1)).findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)
     }
 },)
 

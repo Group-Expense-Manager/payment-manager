@@ -58,6 +58,10 @@ class PaymentService(
         )
     }
 
+    fun getPayment(paymentId: String, groupId: String): Payment {
+        return paymentRepository.findByPaymentIdAndGroupId(paymentId, groupId) ?: throw MissingPaymentException(paymentId, groupId)
+    }
+
     private fun getFxData(baseCurrency: String, targetCurrency: String?, date: Instant) =
         targetCurrency?.let {
             FxData(
@@ -66,3 +70,6 @@ class PaymentService(
             )
         }
 }
+
+class MissingPaymentException(paymentId: String, groupId: String) :
+    RuntimeException("Failed to find payment with id: $paymentId and groupId: $groupId")

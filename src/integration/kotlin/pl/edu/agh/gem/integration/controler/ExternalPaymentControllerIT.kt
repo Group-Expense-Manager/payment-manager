@@ -1,13 +1,21 @@
 package pl.edu.agh.gem.integration.controler
 
 import io.kotest.datatest.withData
+import io.kotest.matchers.nulls.shouldNotBeNull
+import io.kotest.matchers.shouldBe
 import org.springframework.http.HttpStatus.BAD_REQUEST
 import org.springframework.http.HttpStatus.CREATED
 import org.springframework.http.HttpStatus.FORBIDDEN
+import org.springframework.http.HttpStatus.NOT_FOUND
+import org.springframework.http.HttpStatus.OK
+import pl.edu.agh.gem.assertion.shouldBody
 import pl.edu.agh.gem.assertion.shouldHaveHttpStatus
 import pl.edu.agh.gem.assertion.shouldHaveValidationError
 import pl.edu.agh.gem.assertion.shouldHaveValidatorError
+import pl.edu.agh.gem.external.dto.payment.PaymentResponse
+import pl.edu.agh.gem.external.dto.payment.toAmountDto
 import pl.edu.agh.gem.helper.group.DummyGroup.GROUP_ID
+import pl.edu.agh.gem.helper.group.DummyGroup.OTHER_GROUP_ID
 import pl.edu.agh.gem.helper.user.DummyUser.OTHER_USER_ID
 import pl.edu.agh.gem.helper.user.DummyUser.USER_ID
 import pl.edu.agh.gem.helper.user.createGemUser
@@ -17,11 +25,14 @@ import pl.edu.agh.gem.integration.ability.stubAttachmentStoreGenerateBlankAttach
 import pl.edu.agh.gem.integration.ability.stubCurrencyManagerAvailableCurrencies
 import pl.edu.agh.gem.integration.ability.stubCurrencyManagerExchangeRate
 import pl.edu.agh.gem.integration.ability.stubGroupManagerGroupData
+import pl.edu.agh.gem.integration.ability.stubGroupManagerUserGroups
+import pl.edu.agh.gem.internal.persistence.PaymentRepository
 import pl.edu.agh.gem.internal.service.Quadruple
 import pl.edu.agh.gem.util.DummyData.ANOTHER_USER_ID
 import pl.edu.agh.gem.util.DummyData.CURRENCY_1
 import pl.edu.agh.gem.util.DummyData.CURRENCY_2
 import pl.edu.agh.gem.util.DummyData.EXCHANGE_RATE_VALUE
+import pl.edu.agh.gem.util.DummyData.PAYMENT_ID
 import pl.edu.agh.gem.util.createAmountDto
 import pl.edu.agh.gem.util.createCurrenciesDTO
 import pl.edu.agh.gem.util.createCurrenciesResponse
@@ -29,7 +40,9 @@ import pl.edu.agh.gem.util.createExchangeRateResponse
 import pl.edu.agh.gem.util.createGroupAttachmentResponse
 import pl.edu.agh.gem.util.createGroupResponse
 import pl.edu.agh.gem.util.createMembersDTO
+import pl.edu.agh.gem.util.createPayment
 import pl.edu.agh.gem.util.createPaymentCreationRequest
+import pl.edu.agh.gem.util.createUserGroupsResponse
 import pl.edu.agh.gem.validation.ValidationMessage.ATTACHMENT_ID_NULL_OR_NOT_BLANK
 import pl.edu.agh.gem.validation.ValidationMessage.BASE_CURRENCY_EQUAL_TO_TARGET_CURRENCY
 import pl.edu.agh.gem.validation.ValidationMessage.BASE_CURRENCY_NOT_AVAILABLE
@@ -49,6 +62,7 @@ import java.math.BigDecimal
 
 class ExternalPaymentControllerIT(
     private val service: ServiceTestClient,
+    private val paymentRepository: PaymentRepository,
 ) : BaseIntegrationSpec({
 
     should("create payment when attachmentId is provided") {
@@ -181,5 +195,58 @@ class ExternalPaymentControllerIT(
             response shouldHaveHttpStatus BAD_REQUEST
             response shouldHaveValidatorError expectedMessage
         }
+    }
+
+    should("get payment") {
+        // given
+        stubGroupManagerUserGroups(createUserGroupsResponse(GROUP_ID, OTHER_GROUP_ID), USER_ID)
+        val payment = createPayment(PAYMENT_ID)
+        paymentRepository.save(payment)
+
+        // when
+        val response = service.getPayment(createGemUser(USER_ID), PAYMENT_ID, GROUP_ID)
+
+        // then
+        response shouldHaveHttpStatus OK
+        response.shouldBody<PaymentResponse> {
+            creatorId shouldBe payment.creatorId
+            recipientId shouldBe payment.recipientId
+            title shouldBe payment.title
+            type shouldBe payment.type.name
+            amount shouldBe payment.amount.toAmountDto()
+            fxData shouldBe payment.fxData
+            createdAt.shouldNotBeNull()
+            updatedAt.shouldNotBeNull()
+            attachmentId shouldBe payment.attachmentId
+            status shouldBe payment.status.name
+            history.first().also {
+                it.createdAt.shouldNotBeNull()
+                it.participantId shouldBe payment.history.first().participantId
+                it.paymentAction shouldBe payment.history.first().paymentAction.name
+                it.comment shouldBe payment.history.first().comment
+            }
+        }
+    }
+
+    should("return forbidden if user is not a group member") {
+        // given
+        stubGroupManagerUserGroups(createUserGroupsResponse(OTHER_GROUP_ID), USER_ID)
+
+        // when
+        val response = service.getPayment(createGemUser(USER_ID), PAYMENT_ID, GROUP_ID)
+
+        // then
+        response shouldHaveHttpStatus FORBIDDEN
+    }
+
+    should("return not found when payment doesn't exist") {
+        // given
+        stubGroupManagerUserGroups(createUserGroupsResponse(GROUP_ID, OTHER_GROUP_ID), USER_ID)
+
+        // when
+        val response = service.getPayment(createGemUser(USER_ID), PAYMENT_ID, GROUP_ID)
+
+        // then
+        response shouldHaveHttpStatus NOT_FOUND
     }
 },)

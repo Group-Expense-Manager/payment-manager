@@ -5,6 +5,7 @@ import org.springframework.core.annotation.Order
 import org.springframework.http.HttpStatus.BAD_REQUEST
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR
+import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ControllerAdvice
@@ -23,6 +24,7 @@ import pl.edu.agh.gem.internal.client.GroupManagerClientException
 import pl.edu.agh.gem.internal.client.RetryableAttachmentStoreClientException
 import pl.edu.agh.gem.internal.client.RetryableCurrencyManagerClientException
 import pl.edu.agh.gem.internal.client.RetryableGroupManagerClientException
+import pl.edu.agh.gem.internal.service.MissingPaymentException
 import pl.edu.agh.gem.validator.ValidatorsException
 
 @ControllerAdvice
@@ -92,5 +94,10 @@ class ApiExceptionHandler {
         exception: RetryableAttachmentStoreClientException,
     ): ResponseEntity<SimpleErrorsHolder> {
         return ResponseEntity(handleError(exception), INTERNAL_SERVER_ERROR)
+    }
+
+    @ExceptionHandler(MissingPaymentException::class)
+    fun handleMissingPaymentException(exception: MissingPaymentException): ResponseEntity<SimpleErrorsHolder> {
+        return ResponseEntity(handleError(exception), NOT_FOUND)
     }
 }
