@@ -8,13 +8,18 @@ import pl.edu.agh.gem.internal.model.group.GroupData
 import pl.edu.agh.gem.internal.model.payment.FxData
 import pl.edu.agh.gem.internal.model.payment.Payment
 import pl.edu.agh.gem.internal.model.payment.PaymentCreation
+import pl.edu.agh.gem.internal.model.payment.PaymentDecision
+import pl.edu.agh.gem.internal.model.payment.PaymentHistoryEntry
 import pl.edu.agh.gem.internal.persistence.PaymentRepository
 import pl.edu.agh.gem.validation.creation.CurrenciesValidator
 import pl.edu.agh.gem.validation.creation.PaymentCreationDataWrapper
 import pl.edu.agh.gem.validation.creation.RecipientValidator
+import pl.edu.agh.gem.validation.decision.DecisionDataWrapper
+import pl.edu.agh.gem.validation.decision.DecisionValidator
 import pl.edu.agh.gem.validator.ValidatorList.Companion.validatorsOf
 import pl.edu.agh.gem.validator.ValidatorsException
 import java.time.Instant
+import java.time.Instant.now
 
 @Service
 class PaymentService(
@@ -27,6 +32,10 @@ class PaymentService(
     private val paymentCreationValidators = validatorsOf(
         RecipientValidator(),
         CurrenciesValidator(),
+    )
+
+    private val paymentDecisionValidators = validatorsOf(
+        DecisionValidator(),
     )
 
     fun getGroup(groupId: String): GroupData {
@@ -69,6 +78,32 @@ class PaymentService(
                 exchangeRate = currencyManagerClient.getExchangeRate(baseCurrency, targetCurrency, date).value,
             )
         }
+    fun decide(paymentDecision: PaymentDecision) {
+        val payment = paymentRepository.findByPaymentIdAndGroupId(paymentDecision.paymentId, paymentDecision.groupId)
+            ?: throw MissingPaymentException(paymentDecision.paymentId, paymentDecision.groupId)
+
+        paymentDecisionValidators
+            .getFailedValidations(DecisionDataWrapper(paymentDecision, payment))
+            .takeIf { it.isNotEmpty() }
+            ?.also { throw ValidatorsException(it) }
+
+        paymentRepository.save(payment.addDecision(paymentDecision))
+    }
+
+    private fun Payment.addDecision(paymentDecision: PaymentDecision): Payment {
+        val paymentHistoryEntry = PaymentHistoryEntry(
+            participantId = paymentDecision.userId,
+            paymentAction = paymentDecision.decision.toPaymentAction(),
+            comment = paymentDecision.message,
+        )
+        val updatedHistory = history + paymentHistoryEntry
+
+        return copy(
+            updatedAt = now(),
+            status = paymentDecision.decision.toPaymentStatus(),
+            history = updatedHistory,
+        )
+    }
 }
 
 class MissingPaymentException(paymentId: String, groupId: String) :

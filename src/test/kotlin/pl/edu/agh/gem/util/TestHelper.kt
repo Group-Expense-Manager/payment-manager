@@ -10,6 +10,7 @@ import pl.edu.agh.gem.external.dto.group.MemberDTO
 import pl.edu.agh.gem.external.dto.group.UserGroupsResponse
 import pl.edu.agh.gem.external.dto.payment.AmountDto
 import pl.edu.agh.gem.external.dto.payment.PaymentCreationRequest
+import pl.edu.agh.gem.external.dto.payment.PaymentDecisionRequest
 import pl.edu.agh.gem.external.persistence.PaymentEntity
 import pl.edu.agh.gem.helper.group.DummyGroup.GROUP_ID
 import pl.edu.agh.gem.helper.group.DummyGroup.OTHER_GROUP_ID
@@ -20,10 +21,13 @@ import pl.edu.agh.gem.internal.model.currency.Currency
 import pl.edu.agh.gem.internal.model.currency.ExchangeRate
 import pl.edu.agh.gem.internal.model.group.GroupData
 import pl.edu.agh.gem.internal.model.payment.Amount
+import pl.edu.agh.gem.internal.model.payment.Decision
+import pl.edu.agh.gem.internal.model.payment.Decision.ACCEPT
 import pl.edu.agh.gem.internal.model.payment.FxData
 import pl.edu.agh.gem.internal.model.payment.Payment
 import pl.edu.agh.gem.internal.model.payment.PaymentAction.CREATED
 import pl.edu.agh.gem.internal.model.payment.PaymentCreation
+import pl.edu.agh.gem.internal.model.payment.PaymentDecision
 import pl.edu.agh.gem.internal.model.payment.PaymentHistoryEntry
 import pl.edu.agh.gem.internal.model.payment.PaymentStatus
 import pl.edu.agh.gem.internal.model.payment.PaymentStatus.PENDING
@@ -230,6 +234,32 @@ fun createGroupAttachmentResponse(
     attachmentId: String = ATTACHMENT_ID,
 ) = GroupAttachmentResponse(
     id = attachmentId,
+)
+
+fun createPaymentDecisionRequest(
+    paymentId: String = PAYMENT_ID,
+    groupId: String = GROUP_ID,
+    decision: Decision = ACCEPT,
+    message: String = "Some message",
+) = PaymentDecisionRequest(
+    paymentId = paymentId,
+    groupId = groupId,
+    decision = decision,
+    message = message,
+)
+
+fun createPaymentDecision(
+    userId: String = USER_ID,
+    paymentId: String = PAYMENT_ID,
+    groupId: String = GROUP_ID,
+    decision: Decision = ACCEPT,
+    message: String = "Some message",
+) = PaymentDecision(
+    userId = userId,
+    paymentId = paymentId,
+    groupId = groupId,
+    decision = decision,
+    message = message,
 )
 
 object DummyData {

@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController
 import pl.edu.agh.gem.exception.UserWithoutGroupAccessException
 import pl.edu.agh.gem.external.dto.payment.PaymentCreationRequest
 import pl.edu.agh.gem.external.dto.payment.PaymentCreationResponse
+import pl.edu.agh.gem.external.dto.payment.PaymentDecisionRequest
 import pl.edu.agh.gem.external.dto.payment.PaymentResponse
 import pl.edu.agh.gem.external.dto.payment.toPaymentResponse
 import pl.edu.agh.gem.internal.client.GroupManagerClient
@@ -56,6 +57,17 @@ class ExternalPaymentController(
     ): PaymentResponse {
         userId.checkIfUserHaveAccess(groupId)
         return paymentService.getPayment(paymentId, groupId).toPaymentResponse()
+    }
+
+    @PostMapping("decide", consumes = [APPLICATION_JSON_INTERNAL_VER_1])
+    @ResponseStatus(OK)
+    fun decide(
+        @GemUserId userId: String,
+        @Valid @RequestBody
+        paymentDecisionRequest: PaymentDecisionRequest,
+    ) {
+        userId.checkIfUserHaveAccess(paymentDecisionRequest.groupId)
+        paymentService.decide(paymentDecisionRequest.toDomain(userId))
     }
 
     private fun String.checkIfUserHaveAccess(groupMembers: GroupMembers) {

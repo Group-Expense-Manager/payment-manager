@@ -18,4 +18,9 @@ object ValidationMessage {
 
     const val RECIPIENT_IS_CREATOR = "Payment recipient can not be creator"
     const val RECIPIENT_NOT_GROUP_MEMBER = "Payment recipient is not a group member"
+
+    const val PAYMENT_ID_NOT_BLANK = "Payment id can not be blank"
+    const val GROUP_ID_NOT_BLANK = "Group id can not be blank"
+
+    const val USER_NOT_RECIPIENT = "Only recipient can submit decision"
 }
