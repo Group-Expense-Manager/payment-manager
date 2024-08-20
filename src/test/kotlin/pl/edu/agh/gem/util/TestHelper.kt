@@ -37,6 +37,11 @@ import pl.edu.agh.gem.internal.model.payment.PaymentType
 import pl.edu.agh.gem.internal.model.payment.PaymentType.CASH
 import pl.edu.agh.gem.internal.model.payment.PaymentType.OTHER
 import pl.edu.agh.gem.internal.model.payment.PaymentUpdate
+import pl.edu.agh.gem.internal.model.payment.filter.FilterOptions
+import pl.edu.agh.gem.internal.model.payment.filter.SortOrder
+import pl.edu.agh.gem.internal.model.payment.filter.SortOrder.ASCENDING
+import pl.edu.agh.gem.internal.model.payment.filter.SortedBy
+import pl.edu.agh.gem.internal.model.payment.filter.SortedBy.DATE
 import pl.edu.agh.gem.model.GroupMembers
 import pl.edu.agh.gem.util.DummyData.ATTACHMENT_ID
 import pl.edu.agh.gem.util.DummyData.CURRENCY_1
@@ -328,6 +333,21 @@ fun createPaymentUpdateRequestFromPayment(
     date = payment.date,
     message = null,
 )
+
+fun createFilterOptions(
+    title: String? = null,
+    status: PaymentStatus? = null,
+    creatorId: String? = null,
+    sortedBy: SortedBy = DATE,
+    sortOrder: SortOrder = ASCENDING,
+) = FilterOptions(
+    title = title,
+    status = status,
+    creatorId = creatorId,
+    sortedBy = sortedBy,
+    sortOrder = sortOrder,
+)
+
 object DummyData {
     const val PAYMENT_ID = "paymentId"
     const val CURRENCY_1 = "PLN"

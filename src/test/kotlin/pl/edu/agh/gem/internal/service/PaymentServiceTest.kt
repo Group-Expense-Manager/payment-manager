@@ -39,6 +39,7 @@ import pl.edu.agh.gem.util.DummyData.PAYMENT_ID
 import pl.edu.agh.gem.util.createAmount
 import pl.edu.agh.gem.util.createCurrencies
 import pl.edu.agh.gem.util.createExchangeRate
+import pl.edu.agh.gem.util.createFilterOptions
 import pl.edu.agh.gem.util.createGroup
 import pl.edu.agh.gem.util.createPayment
 import pl.edu.agh.gem.util.createPaymentCreation
@@ -410,6 +411,34 @@ class PaymentServiceTest : ShouldSpec({
             shouldThrowWithMessage<ValidatorsException>("Failed validations: $expectedMessage") { paymentService.updatePayment(group, paymentUpdate) }
             verify(paymentRepository, times(0)).save(anyVararg(Payment::class))
         }
+    }
+
+    should("get group activities") {
+        // given
+        val payments = listOf(createPayment())
+        val filterOptions = createFilterOptions()
+        whenever(paymentRepository.findByGroupId(GROUP_ID, filterOptions)).thenReturn(payments)
+
+        // when
+        val result = paymentService.getGroupActivities(GROUP_ID, filterOptions)
+
+        // then
+        result shouldBe payments
+        verify(paymentRepository, times(1)).findByGroupId(GROUP_ID, filterOptions)
+    }
+
+    should("return empty list when group has no payments") {
+        // given
+        val filterOptions = createFilterOptions()
+
+        whenever(paymentRepository.findByGroupId(GROUP_ID, filterOptions)).thenReturn(listOf())
+
+        // when
+        val result = paymentService.getGroupActivities(GROUP_ID, filterOptions)
+
+        // then
+        result shouldBe listOf()
+        verify(paymentRepository, times(1)).findByGroupId(GROUP_ID, filterOptions)
     }
 },)
 
