@@ -7,7 +7,9 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
+import pl.edu.agh.gem.external.dto.payment.AcceptedGroupPaymentsResponse
 import pl.edu.agh.gem.external.dto.payment.GroupActivitiesResponse
+import pl.edu.agh.gem.external.dto.payment.toAcceptedGroupPaymentsResponse
 import pl.edu.agh.gem.external.dto.payment.toGroupActivitiesResponse
 import pl.edu.agh.gem.internal.model.payment.PaymentStatus
 import pl.edu.agh.gem.internal.model.payment.filter.FilterOptions
@@ -35,5 +37,13 @@ class InternalPaymentController(
     ): GroupActivitiesResponse {
         val filterOptions = FilterOptions(title, status, creatorId, sortedBy, sortOrder)
         return paymentService.getGroupActivities(groupId, filterOptions).toGroupActivitiesResponse(groupId)
+    }
+
+    @GetMapping("accepted/groups/{groupId}", produces = [APPLICATION_JSON_INTERNAL_VER_1])
+    @ResponseStatus(OK)
+    fun getAcceptedGroupPayments(
+        @PathVariable groupId: String,
+    ): AcceptedGroupPaymentsResponse {
+        return paymentService.getAcceptedPayments(groupId).toAcceptedGroupPaymentsResponse(groupId)
     }
 }
