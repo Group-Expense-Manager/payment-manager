@@ -78,14 +78,14 @@ class GroupActivitiesResponseTest : ShouldSpec({
         groupActivitiesResponse.groupId shouldBe GROUP_ID
         groupActivitiesResponse.payments.also {
             it shouldHaveSize 3
-            it.map { groupExpensesDto -> groupExpensesDto.paymentId } shouldContainExactly paymentIds
-            it.map { groupExpensesDto -> groupExpensesDto.creatorId } shouldContainExactly creatorIds
-            it.map { groupExpensesDto -> groupExpensesDto.recipientId } shouldContainExactly recipientIds
-            it.map { groupExpensesDto -> groupExpensesDto.title } shouldContainExactly titles
-            it.map { groupExpensesDto -> groupExpensesDto.amount } shouldContainExactly amounts.map { amount -> amount.toAmountDto() }
-            it.map { groupExpensesDto -> groupExpensesDto.targetCurrency } shouldContainExactly targetCurrencies
-            it.map { groupExpensesDto -> groupExpensesDto.status } shouldContainExactly statuses
-            it.map { groupExpensesDto -> groupExpensesDto.date } shouldContainExactly dates
+            it.map { groupPaymentsDto -> groupPaymentsDto.paymentId } shouldContainExactly paymentIds
+            it.map { groupPaymentsDto -> groupPaymentsDto.creatorId } shouldContainExactly creatorIds
+            it.map { groupPaymentsDto -> groupPaymentsDto.recipientId } shouldContainExactly recipientIds
+            it.map { groupPaymentsDto -> groupPaymentsDto.title } shouldContainExactly titles
+            it.map { groupPaymentsDto -> groupPaymentsDto.amount } shouldContainExactly amounts.map { amount -> amount.toAmountDto() }
+            it.map { groupPaymentsDto -> groupPaymentsDto.targetCurrency } shouldContainExactly targetCurrencies
+            it.map { groupPaymentsDto -> groupPaymentsDto.status } shouldContainExactly statuses
+            it.map { groupPaymentsDto -> groupPaymentsDto.date } shouldContainExactly dates
         }
     }
 
