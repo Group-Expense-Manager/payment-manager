@@ -23,6 +23,7 @@ import pl.edu.agh.gem.internal.model.currency.Currency
 import pl.edu.agh.gem.internal.model.currency.ExchangeRate
 import pl.edu.agh.gem.internal.model.group.GroupData
 import pl.edu.agh.gem.internal.model.payment.Amount
+import pl.edu.agh.gem.internal.model.payment.BalanceElement
 import pl.edu.agh.gem.internal.model.payment.Decision
 import pl.edu.agh.gem.internal.model.payment.Decision.ACCEPT
 import pl.edu.agh.gem.internal.model.payment.FxData
@@ -347,6 +348,15 @@ fun createFilterOptions(
     sortedBy = sortedBy,
     sortOrder = sortOrder,
 )
+fun createBalanceElement(
+    value: BigDecimal = BigDecimal.ONE,
+    currency: String = CURRENCY_1,
+    exchangeRate: BigDecimal? = null,
+) = BalanceElement(
+    value = value,
+    currency = currency,
+    exchangeRate = exchangeRate,
+)
 
 object DummyData {
     const val PAYMENT_ID = "paymentId"
@@ -356,3 +366,8 @@ object DummyData {
     const val ANOTHER_USER_ID = "anotherUserId"
     val EXCHANGE_RATE_VALUE: BigDecimal = BigDecimal.TWO
 }
+
+data class Pair<A, B>(
+    val first: A,
+    val second: B,
+)

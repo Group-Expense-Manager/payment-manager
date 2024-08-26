@@ -4,16 +4,21 @@ import org.springframework.stereotype.Service
 import pl.edu.agh.gem.internal.client.AttachmentStoreClient
 import pl.edu.agh.gem.internal.client.CurrencyManagerClient
 import pl.edu.agh.gem.internal.client.GroupManagerClient
+import pl.edu.agh.gem.internal.mapper.BalanceElementMapper
 import pl.edu.agh.gem.internal.model.group.GroupData
+import pl.edu.agh.gem.internal.model.payment.BalanceElement
 import pl.edu.agh.gem.internal.model.payment.FxData
 import pl.edu.agh.gem.internal.model.payment.Payment
 import pl.edu.agh.gem.internal.model.payment.PaymentAction.EDITED
 import pl.edu.agh.gem.internal.model.payment.PaymentCreation
 import pl.edu.agh.gem.internal.model.payment.PaymentDecision
 import pl.edu.agh.gem.internal.model.payment.PaymentHistoryEntry
+import pl.edu.agh.gem.internal.model.payment.PaymentStatus.ACCEPTED
 import pl.edu.agh.gem.internal.model.payment.PaymentStatus.PENDING
 import pl.edu.agh.gem.internal.model.payment.PaymentUpdate
 import pl.edu.agh.gem.internal.model.payment.filter.FilterOptions
+import pl.edu.agh.gem.internal.model.payment.filter.SortOrder.ASCENDING
+import pl.edu.agh.gem.internal.model.payment.filter.SortedBy.DATE
 import pl.edu.agh.gem.internal.persistence.ArchivedPaymentRepository
 import pl.edu.agh.gem.internal.persistence.PaymentRepository
 import pl.edu.agh.gem.validation.CreatorData
@@ -47,6 +52,14 @@ class PaymentService(
     val decisionValidator = DecisionValidator()
     val creatorValidator = CreatorValidator()
     val modificationValidator = ModificationValidator()
+
+    val balanceElementMapper = BalanceElementMapper()
+
+    val acceptedPaymentsFilterOptions = FilterOptions(
+        status = ACCEPTED,
+        sortedBy = DATE,
+        sortOrder = ASCENDING,
+    )
 
     fun getGroup(groupId: String): GroupData {
         return groupManagerClient.getGroup(groupId)
@@ -194,6 +207,15 @@ class PaymentService(
 
     fun getGroupActivities(groupId: String, filterOptions: FilterOptions): List<Payment> {
         return paymentRepository.findByGroupId(groupId, filterOptions)
+    }
+
+    fun getAcceptedGroupPayments(groupId: String): List<Payment> {
+        return paymentRepository.findByGroupId(groupId, acceptedPaymentsFilterOptions)
+    }
+
+    fun getUserBalance(groupId: String, userId: String): List<BalanceElement> {
+        return paymentRepository.findByGroupId(groupId, acceptedPaymentsFilterOptions)
+            .mapNotNull { balanceElementMapper.mapToBalanceElement(userId = userId, payment = it) }
     }
 }
 

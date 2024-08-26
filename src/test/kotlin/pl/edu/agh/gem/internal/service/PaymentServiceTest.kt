@@ -6,6 +6,7 @@ import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.datatest.withData
 import io.kotest.matchers.collections.shouldContainAll
 import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import org.mockito.kotlin.any
@@ -27,6 +28,7 @@ import pl.edu.agh.gem.internal.model.attachment.GroupAttachment
 import pl.edu.agh.gem.internal.model.payment.Payment
 import pl.edu.agh.gem.internal.model.payment.PaymentAction.CREATED
 import pl.edu.agh.gem.internal.model.payment.PaymentAction.EDITED
+import pl.edu.agh.gem.internal.model.payment.PaymentStatus.ACCEPTED
 import pl.edu.agh.gem.internal.model.payment.PaymentStatus.PENDING
 import pl.edu.agh.gem.internal.persistence.ArchivedPaymentRepository
 import pl.edu.agh.gem.internal.persistence.PaymentRepository
@@ -40,6 +42,7 @@ import pl.edu.agh.gem.util.createAmount
 import pl.edu.agh.gem.util.createCurrencies
 import pl.edu.agh.gem.util.createExchangeRate
 import pl.edu.agh.gem.util.createFilterOptions
+import pl.edu.agh.gem.util.createFxData
 import pl.edu.agh.gem.util.createGroup
 import pl.edu.agh.gem.util.createPayment
 import pl.edu.agh.gem.util.createPaymentCreation
@@ -439,6 +442,77 @@ class PaymentServiceTest : ShouldSpec({
         // then
         result shouldBe listOf()
         verify(paymentRepository, times(1)).findByGroupId(GROUP_ID, filterOptions)
+    }
+
+    should("get accepted payments") {
+        // given
+        val acceptedPayment = createPayment(status = ACCEPTED)
+        whenever(paymentRepository.findByGroupId(eq(GROUP_ID), any())).thenReturn(listOf(acceptedPayment))
+
+        // when
+        val result = paymentService.getAcceptedGroupPayments(GROUP_ID)
+
+        // then
+        result.also {
+            it shouldHaveSize 1
+            it.first() shouldBe acceptedPayment
+        }
+        verify(paymentRepository, times(1)).findByGroupId(eq(GROUP_ID), any())
+    }
+
+    should("get user balance") {
+        // given
+        val payments = listOf(
+            createPayment(
+                status = ACCEPTED,
+                creatorId = USER_ID,
+                recipientId = OTHER_USER_ID,
+                amount = createAmount(
+                    value = 50.toBigDecimal(),
+                    currency = CURRENCY_1,
+                ),
+                fxData = createFxData(
+                    targetCurrency = CURRENCY_2,
+                    exchangeRate = "1.5".toBigDecimal(),
+                ),
+            ),
+            createPayment(
+                status = ACCEPTED,
+                creatorId = OTHER_USER_ID,
+                recipientId = USER_ID,
+                amount = createAmount(
+                    value = 50.toBigDecimal(),
+                    currency = CURRENCY_1,
+                ),
+                fxData = null,
+            ),
+            createPayment(
+                status = ACCEPTED,
+                creatorId = OTHER_USER_ID,
+                recipientId = ANOTHER_USER_ID,
+            ),
+
+        )
+        whenever(paymentRepository.findByGroupId(eq(GROUP_ID), any())).thenReturn(payments)
+
+        // when
+        val result = paymentService.getUserBalance(GROUP_ID, USER_ID)
+
+        // then
+        result.also {
+            it shouldHaveSize 2
+            it.first().also { elem ->
+                elem.value shouldBe payments.first().amount.value
+                elem.currency shouldBe payments.first().fxData?.targetCurrency
+                elem.exchangeRate shouldBe payments.first().fxData?.exchangeRate
+            }
+            it.last().also { elem ->
+                elem.value shouldBe payments[1].amount.value.negate()
+                elem.currency shouldBe payments[1].amount.currency
+                elem.exchangeRate.shouldBeNull()
+            }
+        }
+        verify(paymentRepository, times(1)).findByGroupId(eq(GROUP_ID), any())
     }
 },)
 

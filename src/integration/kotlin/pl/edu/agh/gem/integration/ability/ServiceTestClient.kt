@@ -89,4 +89,18 @@ class ServiceTestClient(applicationContext: WebApplicationContext) {
             .headers { it.withValidatedUser(user).withAppAcceptType() }
             .exchange()
     }
+
+    fun getAcceptedGroupPayments(groupId: String): ResponseSpec {
+        return webClient.get()
+            .uri(URI("$INTERNAL/payments/accepted/groups/$groupId"))
+            .headers { it.withAppAcceptType() }
+            .exchange()
+    }
+
+    fun getUserBalance(groupId: String, userId: String): ResponseSpec {
+        return webClient.get()
+            .uri(URI("$INTERNAL/payments/balance/groups/$groupId/users/$userId"))
+            .headers { it.withAppAcceptType() }
+            .exchange()
+    }
 }
