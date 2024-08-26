@@ -8,9 +8,16 @@ import org.springframework.web.context.WebApplicationContext
 import pl.edu.agh.gem.headers.HeadersUtils.withAppAcceptType
 import pl.edu.agh.gem.headers.HeadersUtils.withAppContentType
 import pl.edu.agh.gem.headers.HeadersUtils.withValidatedUser
+import pl.edu.agh.gem.internal.model.payment.PaymentStatus
+import pl.edu.agh.gem.internal.model.payment.filter.SortOrder
+import pl.edu.agh.gem.internal.model.payment.filter.SortOrder.ASCENDING
+import pl.edu.agh.gem.internal.model.payment.filter.SortedBy
+import pl.edu.agh.gem.internal.model.payment.filter.SortedBy.DATE
 import pl.edu.agh.gem.paths.Paths.EXTERNAL
+import pl.edu.agh.gem.paths.Paths.INTERNAL
 import pl.edu.agh.gem.security.GemUser
 import java.net.URI
+import java.util.*
 
 @Component
 @Lazy
@@ -59,6 +66,27 @@ class ServiceTestClient(applicationContext: WebApplicationContext) {
                 it.withAppContentType()
             }
             .bodyValue(body)
+            .exchange()
+    }
+    fun getGroupActivitiesResponse(
+        user: GemUser,
+        groupId: String,
+        title: String? = null,
+        status: PaymentStatus? = null,
+        creatorId: String? = null,
+        sortedBy: SortedBy = DATE,
+        sortOrder: SortOrder = ASCENDING,
+    ): ResponseSpec {
+        return webClient.get()
+            .uri {
+                it.path("$INTERNAL/payments/activities/groups/$groupId")
+                    .queryParamIfPresent("title", Optional.ofNullable(title))
+                    .queryParamIfPresent("status", Optional.ofNullable(status))
+                    .queryParamIfPresent("creatorId", Optional.ofNullable(creatorId))
+                    .queryParam("sortedBy", sortedBy)
+                    .queryParam("sortOrder", sortOrder).build()
+            }
+            .headers { it.withValidatedUser(user).withAppAcceptType() }
             .exchange()
     }
 }

@@ -1,6 +1,7 @@
 package pl.edu.agh.gem.external.persistence
 
 import org.springframework.data.annotation.Id
+import org.springframework.data.mongodb.core.index.Indexed
 import org.springframework.data.mongodb.core.mapping.Document
 import pl.edu.agh.gem.internal.model.payment.Amount
 import pl.edu.agh.gem.internal.model.payment.FxData
@@ -17,10 +18,12 @@ data class PaymentEntity(
     val groupId: String,
     val creatorId: String,
     val recipientId: String,
+    @Indexed(background = true)
     val title: String,
     val type: PaymentType,
     val amount: Amount,
     val fxData: FxData?,
+    @Indexed(background = true)
     val date: Instant,
     val createdAt: Instant,
     val updatedAt: Instant,

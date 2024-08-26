@@ -13,6 +13,7 @@ import pl.edu.agh.gem.internal.model.payment.PaymentDecision
 import pl.edu.agh.gem.internal.model.payment.PaymentHistoryEntry
 import pl.edu.agh.gem.internal.model.payment.PaymentStatus.PENDING
 import pl.edu.agh.gem.internal.model.payment.PaymentUpdate
+import pl.edu.agh.gem.internal.model.payment.filter.FilterOptions
 import pl.edu.agh.gem.internal.persistence.ArchivedPaymentRepository
 import pl.edu.agh.gem.internal.persistence.PaymentRepository
 import pl.edu.agh.gem.validation.CreatorData
@@ -190,6 +191,10 @@ class PaymentService(
             userId = paymentUpdate.userId,
         ),
     )
+
+    fun getGroupActivities(groupId: String, filterOptions: FilterOptions): List<Payment> {
+        return paymentRepository.findByGroupId(groupId, filterOptions)
+    }
 }
 
 class MissingPaymentException(paymentId: String, groupId: String) :
