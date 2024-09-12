@@ -51,6 +51,7 @@ data class PaymentCreationRequest(
         amount = amount.toDomain(),
         targetCurrency = targetCurrency,
         date = date,
+        message = message,
         attachmentId = attachmentId,
     )
 }

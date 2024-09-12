@@ -18,7 +18,6 @@ import pl.edu.agh.gem.assertion.shouldHaveValidatorError
 import pl.edu.agh.gem.exception.UserWithoutGroupAccessException
 import pl.edu.agh.gem.external.dto.group.CurrencyDTO
 import pl.edu.agh.gem.external.dto.payment.PaymentResponse
-import pl.edu.agh.gem.external.dto.payment.PaymentUpdateResponse
 import pl.edu.agh.gem.external.dto.payment.toAmountDto
 import pl.edu.agh.gem.helper.group.DummyGroup.GROUP_ID
 import pl.edu.agh.gem.helper.group.DummyGroup.OTHER_GROUP_ID
@@ -33,6 +32,7 @@ import pl.edu.agh.gem.integration.ability.stubCurrencyManagerAvailableCurrencies
 import pl.edu.agh.gem.integration.ability.stubCurrencyManagerExchangeRate
 import pl.edu.agh.gem.integration.ability.stubGroupManagerGroupData
 import pl.edu.agh.gem.integration.ability.stubGroupManagerUserGroups
+import pl.edu.agh.gem.internal.model.payment.PaymentAction
 import pl.edu.agh.gem.internal.model.payment.PaymentAction.EDITED
 import pl.edu.agh.gem.internal.model.payment.PaymentStatus.PENDING
 import pl.edu.agh.gem.internal.persistence.PaymentRepository
@@ -98,6 +98,29 @@ class ExternalPaymentControllerIT(
 
         // then
         response shouldHaveHttpStatus CREATED
+        response.shouldBody<PaymentResponse> {
+            paymentId.shouldNotBeNull()
+            creatorId shouldBe USER_ID
+            recipientId shouldBe paymentCreationRequest.recipientId
+            title shouldBe paymentCreationRequest.title
+            type shouldBe paymentCreationRequest.type.name
+            amount shouldBe paymentCreationRequest.amount
+            fxData?.also { fxData ->
+                fxData.targetCurrency shouldBe paymentCreationRequest.targetCurrency
+                fxData.exchangeRate.shouldNotBeNull()
+            }
+            date shouldBe paymentCreationRequest.date
+            createdAt.shouldNotBeNull()
+            updatedAt.shouldNotBeNull()
+            attachmentId shouldBe paymentCreationRequest.attachmentId
+            status shouldBe PENDING.name
+            history.first().also {
+                it.createdAt.shouldNotBeNull()
+                it.participantId shouldBe USER_ID
+                it.paymentAction shouldBe PaymentAction.CREATED.name
+                it.comment shouldBe paymentCreationRequest.message
+            }
+        }
     }
 
     should("create payment when attachmentId is not provided") {
@@ -119,6 +142,29 @@ class ExternalPaymentControllerIT(
 
         // then
         response shouldHaveHttpStatus CREATED
+        response.shouldBody<PaymentResponse> {
+            paymentId.shouldNotBeNull()
+            creatorId shouldBe USER_ID
+            recipientId shouldBe paymentCreationRequest.recipientId
+            title shouldBe paymentCreationRequest.title
+            type shouldBe paymentCreationRequest.type.name
+            amount shouldBe paymentCreationRequest.amount
+            fxData?.also { fxData ->
+                fxData.targetCurrency shouldBe paymentCreationRequest.targetCurrency
+                fxData.exchangeRate.shouldNotBeNull()
+            }
+            date shouldBe paymentCreationRequest.date
+            createdAt.shouldNotBeNull()
+            updatedAt.shouldNotBeNull()
+            attachmentId.shouldNotBeNull()
+            status shouldBe PENDING.name
+            history.first().also {
+                it.createdAt.shouldNotBeNull()
+                it.participantId shouldBe USER_ID
+                it.paymentAction shouldBe PaymentAction.CREATED.name
+                it.comment shouldBe paymentCreationRequest.message
+            }
+        }
     }
 
     should("return forbidden when user dont have access") {
@@ -226,12 +272,14 @@ class ExternalPaymentControllerIT(
         // then
         response shouldHaveHttpStatus OK
         response.shouldBody<PaymentResponse> {
+            paymentId shouldBe payment.id
             creatorId shouldBe payment.creatorId
             recipientId shouldBe payment.recipientId
             title shouldBe payment.title
             type shouldBe payment.type.name
             amount shouldBe payment.amount.toAmountDto()
             fxData shouldBe payment.fxData
+            date shouldBe payment.date
             createdAt.shouldNotBeNull()
             updatedAt.shouldNotBeNull()
             attachmentId shouldBe payment.attachmentId
@@ -533,8 +581,28 @@ class ExternalPaymentControllerIT(
 
         // then
         response shouldHaveHttpStatus OK
-        response.shouldBody<PaymentUpdateResponse> {
-            paymentId shouldBe PAYMENT_ID
+        response.shouldBody<PaymentResponse> {
+            paymentId.shouldNotBeNull()
+            creatorId shouldBe USER_ID
+            recipientId shouldBe payment.recipientId
+            title shouldBe paymentUpdateRequest.title
+            type shouldBe paymentUpdateRequest.type.name
+            amount shouldBe paymentUpdateRequest.amount
+            fxData?.also { fxData ->
+                fxData.targetCurrency shouldBe paymentUpdateRequest.targetCurrency
+                fxData.exchangeRate.shouldNotBeNull()
+            }
+            date shouldBe paymentUpdateRequest.date
+            createdAt.shouldNotBeNull()
+            updatedAt.shouldNotBeNull()
+            attachmentId.shouldNotBeNull()
+            status shouldBe PENDING.name
+            history.last().also {
+                it.createdAt.shouldNotBeNull()
+                it.participantId shouldBe USER_ID
+                it.paymentAction shouldBe EDITED.name
+                it.comment shouldBe paymentUpdateRequest.message
+            }
         }
         paymentRepository.findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID).also {
             it.shouldNotBeNull()

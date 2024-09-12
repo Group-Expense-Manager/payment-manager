@@ -27,7 +27,9 @@ class PaymentCreationRequestTest : ShouldSpec({
                 amount.value shouldBe paymentCreationRequest.amount.value
                 amount.currency shouldBe paymentCreationRequest.amount.currency
             }
+            it.date shouldBe paymentCreationRequest.date
             it.targetCurrency shouldBe paymentCreationRequest.targetCurrency
+            it.message shouldBe paymentCreationRequest.message
             it.attachmentId shouldBe paymentCreationRequest.attachmentId
         }
     }
