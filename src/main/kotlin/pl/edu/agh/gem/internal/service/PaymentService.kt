@@ -30,7 +30,6 @@ import pl.edu.agh.gem.validation.creation.RecipientValidator
 import pl.edu.agh.gem.validation.decision.DecisionValidator
 import pl.edu.agh.gem.validation.decision.PaymentDecisionDataWrapper
 import pl.edu.agh.gem.validation.delete.PaymentDeletionDataWrapper
-import pl.edu.agh.gem.validation.update.ModificationValidator
 import pl.edu.agh.gem.validation.update.PaymentUpdateDataWrapper
 import pl.edu.agh.gem.validator.ValidatorsException
 import pl.edu.agh.gem.validator.alsoValidate
@@ -51,7 +50,6 @@ class PaymentService(
     val currenciesValidator = CurrenciesValidator()
     val decisionValidator = DecisionValidator()
     val creatorValidator = CreatorValidator()
-    val modificationValidator = ModificationValidator()
 
     val balanceElementMapper = BalanceElementMapper()
 
@@ -162,7 +160,6 @@ class PaymentService(
         )
 
         validate(dataWrapper, creatorValidator)
-            .alsoValidate(dataWrapper, modificationValidator)
             .alsoValidate(dataWrapper, currenciesValidator)
             .takeIf { it.isNotEmpty() }
             ?.also { throw ValidatorsException(it) }

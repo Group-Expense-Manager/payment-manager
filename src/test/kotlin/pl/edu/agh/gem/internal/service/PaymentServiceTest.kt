@@ -52,7 +52,6 @@ import pl.edu.agh.gem.util.createPaymentUpdateFromPayment
 import pl.edu.agh.gem.validation.ValidationMessage.BASE_CURRENCY_EQUAL_TO_TARGET_CURRENCY
 import pl.edu.agh.gem.validation.ValidationMessage.BASE_CURRENCY_NOT_AVAILABLE
 import pl.edu.agh.gem.validation.ValidationMessage.BASE_CURRENCY_NOT_IN_GROUP_CURRENCIES
-import pl.edu.agh.gem.validation.ValidationMessage.NO_MODIFICATION
 import pl.edu.agh.gem.validation.ValidationMessage.RECIPIENT_IS_CREATOR
 import pl.edu.agh.gem.validation.ValidationMessage.RECIPIENT_NOT_GROUP_MEMBER
 import pl.edu.agh.gem.validation.ValidationMessage.TARGET_CURRENCY_NOT_IN_GROUP_CURRENCIES
@@ -358,6 +357,51 @@ class PaymentServiceTest : ShouldSpec({
         }
     }
 
+    should("update payment when data did not change") {
+        // given
+        val payment = createPayment(id = PAYMENT_ID, groupId = GROUP_ID, creatorId = USER_ID)
+        val paymentUpdate = createPaymentUpdateFromPayment(payment)
+
+        val exchangeRate = createExchangeRate(EXCHANGE_RATE_VALUE)
+        val group = createGroup(createGroupMembers(USER_ID, OTHER_USER_ID, ANOTHER_USER_ID), currencies = createCurrencies(CURRENCY_1, CURRENCY_2))
+        whenever(paymentRepository.findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)).thenReturn(payment)
+        whenever(currencyManagerClient.getExchangeRate(eq(CURRENCY_1), eq(CURRENCY_2), any())).thenReturn(exchangeRate)
+        whenever(currencyManagerClient.getAvailableCurrencies()).thenReturn(createCurrencies(CURRENCY_1, CURRENCY_2))
+        whenever(paymentRepository.save(anyVararg(Payment::class))).doAnswer { it.arguments[0] as? Payment }
+
+        // when & then
+        val result = paymentService.updatePayment(group, paymentUpdate)
+        verify(paymentRepository, times(1)).findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)
+        verify(currencyManagerClient, times(1)).getAvailableCurrencies()
+        verify(paymentRepository, times(1)).save(anyVararg(Payment::class))
+
+        result.also {
+            it.id shouldBe PAYMENT_ID
+            it.groupId shouldBe GROUP_ID
+            it.creatorId shouldBe USER_ID
+            it.title shouldBe paymentUpdate.title
+            it.type shouldBe paymentUpdate.type
+            it.amount shouldBe paymentUpdate.amount
+            it.fxData.also { fxData ->
+                fxData?.targetCurrency shouldBe paymentUpdate.targetCurrency
+                fxData?.exchangeRate shouldBe exchangeRate.value
+            }
+            it.date shouldBe paymentUpdate.date
+            it.createdAt shouldBe payment.createdAt
+            it.updatedAt.shouldNotBeNull()
+            it.attachmentId shouldBe payment.attachmentId
+            it.recipientId shouldBe payment.recipientId
+            it.status shouldBe PENDING
+            it.history shouldContainAll payment.history
+            it.history.last().also { history ->
+                history.participantId shouldBe USER_ID
+                history.createdAt.shouldNotBeNull()
+                history.paymentAction shouldBe EDITED
+                history.comment shouldBe paymentUpdate.message
+            }
+        }
+    }
+
     should("throw MissingPaymentException when updating payment and payment does not exist") {
         // given
         val paymentUpdate = createPaymentUpdate(id = PAYMENT_ID, groupId = GROUP_ID, userId = USER_ID)
@@ -395,13 +439,6 @@ class PaymentServiceTest : ShouldSpec({
                 arrayOf(CURRENCY_1, CURRENCY_2),
                 arrayOf(CURRENCY_1, CURRENCY_2),
             ),
-            Quadruple(
-                NO_MODIFICATION,
-                createPaymentUpdateFromPayment(createPayment(id = PAYMENT_ID, groupId = GROUP_ID, creatorId = USER_ID)),
-                arrayOf(CURRENCY_1, CURRENCY_2),
-                arrayOf(CURRENCY_1, CURRENCY_2),
-            ),
-
         ) { (expectedMessage, paymentUpdate, groupCurrencies, availableCurrencies) ->
             // given
             val payment = createPayment(id = PAYMENT_ID, groupId = GROUP_ID, creatorId = USER_ID)
