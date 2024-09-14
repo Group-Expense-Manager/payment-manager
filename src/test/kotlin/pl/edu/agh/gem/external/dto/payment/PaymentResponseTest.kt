@@ -16,12 +16,14 @@ class PaymentResponseTest : ShouldSpec({
 
         // then
         paymentResponse.also {
+            it.paymentId shouldBe payment.id
             it.creatorId shouldBe payment.creatorId
             it.recipientId shouldBe payment.recipientId
             it.title shouldBe payment.title
             it.type shouldBe payment.type.name
             it.amount shouldBe payment.amount.toAmountDto()
             it.fxData shouldBe payment.fxData
+            it.date shouldBe payment.date
             it.createdAt.shouldNotBeNull()
             it.updatedAt.shouldNotBeNull()
             it.attachmentId shouldBe payment.attachmentId

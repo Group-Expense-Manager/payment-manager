@@ -7,12 +7,14 @@ import pl.edu.agh.gem.internal.model.payment.PaymentHistoryEntry
 import java.time.Instant
 
 data class PaymentResponse(
+    val paymentId: String,
     val creatorId: String,
     val recipientId: String,
     val title: String,
     val type: String,
     val amount: AmountDto,
     val fxData: FxData?,
+    val date: Instant,
     val createdAt: Instant,
     val updatedAt: Instant,
     val attachmentId: String,
@@ -21,12 +23,14 @@ data class PaymentResponse(
 )
 
 fun Payment.toPaymentResponse() = PaymentResponse(
+    paymentId = id,
     creatorId = creatorId,
     recipientId = recipientId,
     title = title,
     type = type.name,
     amount = amount.toAmountDto(),
     fxData = fxData,
+    date = date,
     createdAt = createdAt,
     updatedAt = updatedAt,
     attachmentId = attachmentId,
