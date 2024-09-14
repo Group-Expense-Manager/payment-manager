@@ -647,8 +647,28 @@ class ExternalPaymentControllerIT(
 
         // then
         response shouldHaveHttpStatus OK
-        response.shouldBody<PaymentUpdateResponse> {
-            paymentId shouldBe PAYMENT_ID
+        response.shouldBody<PaymentResponse> {
+            paymentId.shouldNotBeNull()
+            creatorId shouldBe USER_ID
+            recipientId shouldBe payment.recipientId
+            title shouldBe paymentUpdateRequest.title
+            type shouldBe paymentUpdateRequest.type.name
+            amount shouldBe paymentUpdateRequest.amount
+            fxData?.also { fxData ->
+                fxData.targetCurrency shouldBe paymentUpdateRequest.targetCurrency
+                fxData.exchangeRate.shouldNotBeNull()
+            }
+            date shouldBe paymentUpdateRequest.date
+            createdAt.shouldNotBeNull()
+            updatedAt.shouldNotBeNull()
+            attachmentId.shouldNotBeNull()
+            status shouldBe PENDING.name
+            history.last().also {
+                it.createdAt.shouldNotBeNull()
+                it.participantId shouldBe USER_ID
+                it.paymentAction shouldBe EDITED.name
+                it.comment shouldBe paymentUpdateRequest.message
+            }
         }
         paymentRepository.findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID).also {
             it.shouldNotBeNull()
