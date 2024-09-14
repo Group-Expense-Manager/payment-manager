@@ -24,6 +24,5 @@ object ValidationMessage {
 
     const val USER_NOT_RECIPIENT = "Only recipient can submit decision"
 
-    const val NO_MODIFICATION = "Update does not change anything"
     const val USER_NOT_CREATOR = "Only creator can update payment"
 }

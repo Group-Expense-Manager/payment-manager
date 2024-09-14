@@ -64,7 +64,6 @@ import pl.edu.agh.gem.validation.ValidationMessage.BASE_CURRENCY_NOT_IN_GROUP_CU
 import pl.edu.agh.gem.validation.ValidationMessage.BASE_CURRENCY_PATTERN
 import pl.edu.agh.gem.validation.ValidationMessage.GROUP_ID_NOT_BLANK
 import pl.edu.agh.gem.validation.ValidationMessage.MESSAGE_NULL_OR_NOT_BLANK
-import pl.edu.agh.gem.validation.ValidationMessage.NO_MODIFICATION
 import pl.edu.agh.gem.validation.ValidationMessage.PAYMENT_ID_NOT_BLANK
 import pl.edu.agh.gem.validation.ValidationMessage.POSITIVE_AMOUNT
 import pl.edu.agh.gem.validation.ValidationMessage.RECIPIENT_ID_NOT_BLANK
@@ -490,13 +489,6 @@ class ExternalPaymentControllerIT(
                 USER_ID,
             ),
             Quintuple(
-                NO_MODIFICATION,
-                createPaymentUpdateRequestFromPayment(createPayment(id = PAYMENT_ID, groupId = GROUP_ID, creatorId = USER_ID)),
-                listOf(CURRENCY_1, CURRENCY_2),
-                arrayOf(CURRENCY_1, CURRENCY_2),
-                USER_ID,
-            ),
-            Quintuple(
                 USER_NOT_CREATOR,
                 createPaymentUpdateRequest(),
                 listOf(CURRENCY_1, CURRENCY_2),
@@ -528,6 +520,52 @@ class ExternalPaymentControllerIT(
         // given
         val payment = createPayment(id = PAYMENT_ID, groupId = GROUP_ID, creatorId = USER_ID)
         val paymentUpdateRequest = createPaymentUpdateRequest(amount = createAmountDto(value = "6".toBigDecimal()))
+        paymentRepository.save(payment)
+        stubGroupManagerGroupData(createGroupResponse(members = createMembersDTO(USER_ID, OTHER_USER_ID, ANOTHER_USER_ID)), GROUP_ID)
+        stubCurrencyManagerAvailableCurrencies(createCurrenciesResponse(CURRENCY_1, CURRENCY_2))
+        stubCurrencyManagerExchangeRate(
+            createExchangeRateResponse(value = EXCHANGE_RATE_VALUE),
+            CURRENCY_1,
+            CURRENCY_2,
+        )
+        // when
+        val response = service.updatePayment(paymentUpdateRequest, createGemUser(USER_ID), GROUP_ID, PAYMENT_ID)
+
+        // then
+        response shouldHaveHttpStatus OK
+        response.shouldBody<PaymentUpdateResponse> {
+            paymentId shouldBe PAYMENT_ID
+        }
+        paymentRepository.findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID).also {
+            it.shouldNotBeNull()
+            it.id shouldBe PAYMENT_ID
+            it.groupId shouldBe GROUP_ID
+            it.creatorId shouldBe USER_ID
+            it.title shouldBe paymentUpdateRequest.title
+            it.type shouldBe paymentUpdateRequest.type
+            it.amount shouldBe paymentUpdateRequest.amount.toDomain()
+            it.fxData.also { fxData ->
+                fxData?.targetCurrency shouldBe paymentUpdateRequest.targetCurrency
+                fxData?.exchangeRate shouldBe EXCHANGE_RATE_VALUE
+            }
+            it.createdAt.shouldNotBeNull()
+            it.updatedAt.shouldNotBeNull()
+            it.attachmentId shouldBe payment.attachmentId
+            it.recipientId shouldBe payment.recipientId
+            it.status shouldBe PENDING
+            it.history.last().also { history ->
+                history.participantId shouldBe USER_ID
+                history.createdAt.shouldNotBeNull()
+                history.paymentAction shouldBe EDITED
+                history.comment shouldBe paymentUpdateRequest.message
+            }
+        }
+    }
+
+    should("update payment when data did not change") {
+        // given
+        val payment = createPayment(id = PAYMENT_ID, groupId = GROUP_ID, creatorId = USER_ID)
+        val paymentUpdateRequest = createPaymentUpdateRequestFromPayment(payment)
         paymentRepository.save(payment)
         stubGroupManagerGroupData(createGroupResponse(members = createMembersDTO(USER_ID, OTHER_USER_ID, ANOTHER_USER_ID)), GROUP_ID)
         stubCurrencyManagerAvailableCurrencies(createCurrenciesResponse(CURRENCY_1, CURRENCY_2))
