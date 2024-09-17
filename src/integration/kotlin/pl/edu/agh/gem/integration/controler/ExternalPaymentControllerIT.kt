@@ -56,6 +56,7 @@ import pl.edu.agh.gem.util.createPaymentDecisionRequest
 import pl.edu.agh.gem.util.createPaymentUpdateRequest
 import pl.edu.agh.gem.util.createPaymentUpdateRequestFromPayment
 import pl.edu.agh.gem.util.createUserGroupsResponse
+import pl.edu.agh.gem.validation.ValidationMessage.AMOUNT_DECIMAL_PLACES
 import pl.edu.agh.gem.validation.ValidationMessage.ATTACHMENT_ID_NULL_OR_NOT_BLANK
 import pl.edu.agh.gem.validation.ValidationMessage.BASE_CURRENCY_EQUAL_TO_TARGET_CURRENCY
 import pl.edu.agh.gem.validation.ValidationMessage.BASE_CURRENCY_NOT_AVAILABLE
@@ -63,6 +64,7 @@ import pl.edu.agh.gem.validation.ValidationMessage.BASE_CURRENCY_NOT_BLANK
 import pl.edu.agh.gem.validation.ValidationMessage.BASE_CURRENCY_NOT_IN_GROUP_CURRENCIES
 import pl.edu.agh.gem.validation.ValidationMessage.BASE_CURRENCY_PATTERN
 import pl.edu.agh.gem.validation.ValidationMessage.GROUP_ID_NOT_BLANK
+import pl.edu.agh.gem.validation.ValidationMessage.MAX_AMOUNT
 import pl.edu.agh.gem.validation.ValidationMessage.MESSAGE_NULL_OR_NOT_BLANK
 import pl.edu.agh.gem.validation.ValidationMessage.PAYMENT_ID_NOT_BLANK
 import pl.edu.agh.gem.validation.ValidationMessage.POSITIVE_AMOUNT
@@ -190,6 +192,8 @@ class ExternalPaymentControllerIT(
                 createPaymentCreationRequest(title = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
             ),
             Pair(POSITIVE_AMOUNT, createPaymentCreationRequest(amount = createAmountDto(value = BigDecimal.ZERO))),
+            Pair(MAX_AMOUNT, createPaymentCreationRequest(amount = createAmountDto(value = "100000".toBigDecimal()))),
+            Pair(AMOUNT_DECIMAL_PLACES, createPaymentCreationRequest(amount = createAmountDto(value = "1000.001".toBigDecimal()))),
             Pair(BASE_CURRENCY_NOT_BLANK, createPaymentCreationRequest(amount = createAmountDto(currency = ""))),
             Pair(BASE_CURRENCY_PATTERN, createPaymentCreationRequest(amount = createAmountDto(currency = "pln"))),
             Pair(TARGET_CURRENCY_PATTERN, createPaymentCreationRequest(targetCurrency = "pln")),
@@ -463,6 +467,8 @@ class ExternalPaymentControllerIT(
                 createPaymentUpdateRequest(title = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
             ),
             Pair(POSITIVE_AMOUNT, createPaymentUpdateRequest(amount = createAmountDto(value = BigDecimal.ZERO))),
+            Pair(MAX_AMOUNT, createPaymentUpdateRequest(amount = createAmountDto(value = "100000".toBigDecimal()))),
+            Pair(AMOUNT_DECIMAL_PLACES, createPaymentUpdateRequest(amount = createAmountDto(value = "1000.001".toBigDecimal()))),
             Pair(BASE_CURRENCY_NOT_BLANK, createPaymentUpdateRequest(amount = createAmountDto(currency = ""))),
             Pair(BASE_CURRENCY_PATTERN, createPaymentUpdateRequest(amount = createAmountDto(currency = "pln"))),
             Pair(TARGET_CURRENCY_PATTERN, createPaymentUpdateRequest(targetCurrency = "pln")),
