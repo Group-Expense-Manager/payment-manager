@@ -1,20 +1,24 @@
 package pl.edu.agh.gem.external.dto.payment
 
 import jakarta.validation.Valid
+import jakarta.validation.constraints.DecimalMax
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Positive
 import jakarta.validation.constraints.Size
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME
+import pl.edu.agh.gem.annotation.decimalplaces.DecimalPlaces
 import pl.edu.agh.gem.annotation.nullorblank.NullOrNotBlank
 import pl.edu.agh.gem.annotation.nullorpattern.NullOrPattern
 import pl.edu.agh.gem.internal.model.payment.Amount
 import pl.edu.agh.gem.internal.model.payment.PaymentCreation
 import pl.edu.agh.gem.internal.model.payment.PaymentType
+import pl.edu.agh.gem.validation.ValidationMessage.AMOUNT_DECIMAL_PLACES
 import pl.edu.agh.gem.validation.ValidationMessage.ATTACHMENT_ID_NULL_OR_NOT_BLANK
 import pl.edu.agh.gem.validation.ValidationMessage.BASE_CURRENCY_NOT_BLANK
 import pl.edu.agh.gem.validation.ValidationMessage.BASE_CURRENCY_PATTERN
+import pl.edu.agh.gem.validation.ValidationMessage.MAX_AMOUNT
 import pl.edu.agh.gem.validation.ValidationMessage.MESSAGE_NULL_OR_NOT_BLANK
 import pl.edu.agh.gem.validation.ValidationMessage.POSITIVE_AMOUNT
 import pl.edu.agh.gem.validation.ValidationMessage.RECIPIENT_ID_NOT_BLANK
@@ -58,6 +62,8 @@ data class PaymentCreationRequest(
 
 data class AmountDto(
     @field:Positive(message = POSITIVE_AMOUNT)
+    @field:DecimalMax(value = "100000", inclusive = false, message = MAX_AMOUNT)
+    @field:DecimalPlaces(max = 2, message = AMOUNT_DECIMAL_PLACES)
     val value: BigDecimal,
     @field:NotBlank(message = BASE_CURRENCY_NOT_BLANK)
     @field:Pattern(regexp = "[A-Z]{3}", message = BASE_CURRENCY_PATTERN)
