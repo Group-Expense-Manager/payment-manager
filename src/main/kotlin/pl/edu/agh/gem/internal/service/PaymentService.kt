@@ -34,8 +34,9 @@ import pl.edu.agh.gem.validation.update.PaymentUpdateDataWrapper
 import pl.edu.agh.gem.validator.ValidatorsException
 import pl.edu.agh.gem.validator.alsoValidate
 import pl.edu.agh.gem.validator.validate
-import java.time.Instant
 import java.time.Instant.now
+import java.time.LocalDate
+import java.time.ZoneId
 
 @Service
 class PaymentService(
@@ -70,12 +71,17 @@ class PaymentService(
             .takeIf { it.isNotEmpty() }
             ?.also { throw ValidatorsException(it) }
 
+        val fxData = getFxData(
+            paymentCreation.amount.currency,
+            paymentCreation.targetCurrency,
+            paymentCreation.date.atZone(ZoneId.systemDefault()).toLocalDate(),
+        )
         val attachmentId = paymentCreation.attachmentId
             ?: attachmentStoreClient.generateBlankAttachment(paymentCreation.groupId, paymentCreation.creatorId).id
 
         return paymentRepository.save(
             paymentCreation.toPayment(
-                fxData = getFxData(paymentCreation.amount.currency, paymentCreation.targetCurrency, paymentCreation.date),
+                fxData = fxData,
                 attachmentId = attachmentId,
             ),
         )
@@ -98,7 +104,7 @@ class PaymentService(
         return paymentRepository.findByPaymentIdAndGroupId(paymentId, groupId) ?: throw MissingPaymentException(paymentId, groupId)
     }
 
-    private fun getFxData(baseCurrency: String, targetCurrency: String?, date: Instant) =
+    private fun getFxData(baseCurrency: String, targetCurrency: String?, date: LocalDate) =
         targetCurrency?.let {
             FxData(
                 targetCurrency = targetCurrency,
@@ -172,7 +178,7 @@ class PaymentService(
                 fxData = getFxData(
                     update.amount.currency,
                     update.targetCurrency,
-                    update.date,
+                    update.date.atZone(ZoneId.systemDefault()).toLocalDate(),
                 ),
                 date = update.date,
                 updatedAt = now(),
