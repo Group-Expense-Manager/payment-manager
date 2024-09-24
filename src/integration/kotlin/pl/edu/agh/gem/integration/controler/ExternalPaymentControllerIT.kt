@@ -78,6 +78,8 @@ import pl.edu.agh.gem.validation.ValidationMessage.TITLE_NOT_BLANK
 import pl.edu.agh.gem.validation.ValidationMessage.USER_NOT_CREATOR
 import pl.edu.agh.gem.validation.ValidationMessage.USER_NOT_RECIPIENT
 import java.math.BigDecimal
+import java.time.Instant
+import java.time.ZoneId
 
 class ExternalPaymentControllerIT(
     private val service: ServiceTestClient,
@@ -93,6 +95,7 @@ class ExternalPaymentControllerIT(
             createExchangeRateResponse(value = EXCHANGE_RATE_VALUE),
             CURRENCY_1,
             CURRENCY_2,
+            Instant.ofEpochSecond(0L).atZone(ZoneId.systemDefault()).toLocalDate(),
         )
 
         // when
@@ -136,6 +139,7 @@ class ExternalPaymentControllerIT(
             createExchangeRateResponse(value = EXCHANGE_RATE_VALUE),
             CURRENCY_1,
             CURRENCY_2,
+            Instant.ofEpochSecond(0L).atZone(ZoneId.systemDefault()).toLocalDate(),
         )
         stubAttachmentStoreGenerateBlankAttachment(attachment, GROUP_ID, USER_ID)
 
@@ -253,6 +257,7 @@ class ExternalPaymentControllerIT(
                 createExchangeRateResponse(value = EXCHANGE_RATE_VALUE),
                 CURRENCY_1,
                 CURRENCY_2,
+                Instant.ofEpochSecond(0L).atZone(ZoneId.systemDefault()).toLocalDate(),
             )
 
             // when
@@ -581,6 +586,7 @@ class ExternalPaymentControllerIT(
             createExchangeRateResponse(value = EXCHANGE_RATE_VALUE),
             CURRENCY_1,
             CURRENCY_2,
+            Instant.ofEpochSecond(0L).atZone(ZoneId.systemDefault()).toLocalDate(),
         )
         // when
         val response = service.updatePayment(paymentUpdateRequest, createGemUser(USER_ID), GROUP_ID, PAYMENT_ID)
@@ -647,6 +653,7 @@ class ExternalPaymentControllerIT(
             createExchangeRateResponse(value = EXCHANGE_RATE_VALUE),
             CURRENCY_1,
             CURRENCY_2,
+            Instant.ofEpochSecond(0L).atZone(ZoneId.systemDefault()).toLocalDate(),
         )
         // when
         val response = service.updatePayment(paymentUpdateRequest, createGemUser(USER_ID), GROUP_ID, PAYMENT_ID)
