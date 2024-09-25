@@ -22,7 +22,7 @@ class PaymentResponseTest : ShouldSpec({
             it.title shouldBe payment.title
             it.type shouldBe payment.type.name
             it.amount shouldBe payment.amount.toAmountDto()
-            it.fxData shouldBe payment.fxData
+            it.fxData shouldBe payment.fxData?.toDto()
             it.date shouldBe payment.date
             it.createdAt.shouldNotBeNull()
             it.updatedAt.shouldNotBeNull()

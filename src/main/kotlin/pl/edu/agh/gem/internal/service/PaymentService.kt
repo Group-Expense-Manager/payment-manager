@@ -111,7 +111,7 @@ class PaymentService(
                 exchangeRate = currencyManagerClient.getExchangeRate(baseCurrency, targetCurrency, date).value,
             )
         }
-    fun decide(paymentDecision: PaymentDecision) {
+    fun decide(paymentDecision: PaymentDecision): Payment {
         val payment = paymentRepository.findByPaymentIdAndGroupId(paymentDecision.paymentId, paymentDecision.groupId)
             ?: throw MissingPaymentException(paymentDecision.paymentId, paymentDecision.groupId)
 
@@ -120,7 +120,7 @@ class PaymentService(
             .takeIf { it.isNotEmpty() }
             ?.also { throw ValidatorsException(it) }
 
-        paymentRepository.save(payment.addDecision(paymentDecision))
+        return paymentRepository.save(payment.addDecision(paymentDecision))
     }
 
     private fun Payment.addDecision(paymentDecision: PaymentDecision): Payment {
