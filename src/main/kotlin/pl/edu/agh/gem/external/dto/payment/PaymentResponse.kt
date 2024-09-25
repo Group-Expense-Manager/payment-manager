@@ -1,7 +1,6 @@
 package pl.edu.agh.gem.external.dto.payment
 
 import pl.edu.agh.gem.internal.model.payment.Amount
-import pl.edu.agh.gem.internal.model.payment.FxData
 import pl.edu.agh.gem.internal.model.payment.Payment
 import pl.edu.agh.gem.internal.model.payment.PaymentHistoryEntry
 import java.time.Instant
@@ -13,7 +12,7 @@ data class PaymentResponse(
     val title: String,
     val type: String,
     val amount: AmountDto,
-    val fxData: FxData?,
+    val fxData: FxDataDto?,
     val date: Instant,
     val createdAt: Instant,
     val updatedAt: Instant,
@@ -29,7 +28,7 @@ fun Payment.toPaymentResponse() = PaymentResponse(
     title = title,
     type = type.name,
     amount = amount.toAmountDto(),
-    fxData = fxData,
+    fxData = fxData?.toDto(),
     date = date,
     createdAt = createdAt,
     updatedAt = updatedAt,

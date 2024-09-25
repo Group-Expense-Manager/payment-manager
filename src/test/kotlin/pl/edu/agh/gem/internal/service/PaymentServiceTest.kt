@@ -26,6 +26,7 @@ import pl.edu.agh.gem.internal.client.CurrencyManagerClient
 import pl.edu.agh.gem.internal.client.GroupManagerClient
 import pl.edu.agh.gem.internal.model.attachment.GroupAttachment
 import pl.edu.agh.gem.internal.model.payment.Payment
+import pl.edu.agh.gem.internal.model.payment.PaymentAction
 import pl.edu.agh.gem.internal.model.payment.PaymentAction.CREATED
 import pl.edu.agh.gem.internal.model.payment.PaymentAction.EDITED
 import pl.edu.agh.gem.internal.model.payment.PaymentStatus.ACCEPTED
@@ -236,13 +237,36 @@ class PaymentServiceTest : ShouldSpec({
         // given
         val payment = createPayment()
         whenever(paymentRepository.findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)).thenReturn(payment)
+        whenever(paymentRepository.save(anyVararg(Payment::class))).thenAnswer { it.arguments[0] }
 
         val paymentDecision = createPaymentDecision(userId = OTHER_USER_ID)
 
         // when
-        paymentService.decide(paymentDecision)
+        val result = paymentService.decide(paymentDecision)
 
         // then
+        result.also {
+            it.id shouldBe PAYMENT_ID
+            it.groupId shouldBe GROUP_ID
+            it.creatorId shouldBe USER_ID
+            it.title shouldBe payment.title
+            it.type shouldBe payment.type
+            it.amount shouldBe payment.amount
+            it.fxData shouldBe payment.fxData
+            it.date shouldBe payment.date
+            it.createdAt shouldBe payment.createdAt
+            it.updatedAt.shouldNotBeNull()
+            it.attachmentId shouldBe payment.attachmentId
+            it.recipientId shouldBe payment.recipientId
+            it.status shouldBe ACCEPTED
+            it.history shouldContainAll payment.history
+            it.history.last().also { history ->
+                history.participantId shouldBe OTHER_USER_ID
+                history.createdAt.shouldNotBeNull()
+                history.paymentAction shouldBe PaymentAction.ACCEPTED
+                history.comment shouldBe paymentDecision.message
+            }
+        }
         verify(paymentRepository, times(1)).findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)
         verify(paymentRepository, times(1)).save(anyVararg(Payment::class))
     }

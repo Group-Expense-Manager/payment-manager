@@ -65,9 +65,9 @@ class ExternalPaymentController(
         @GemUserId userId: String,
         @Valid @RequestBody
         paymentDecisionRequest: PaymentDecisionRequest,
-    ) {
+    ): PaymentResponse {
         userId.checkIfUserHaveAccess(paymentDecisionRequest.groupId)
-        paymentService.decide(paymentDecisionRequest.toDomain(userId))
+        return paymentService.decide(paymentDecisionRequest.toDomain(userId)).toPaymentResponse()
     }
 
     @DeleteMapping("{paymentId}/groups/{groupId}")

@@ -19,6 +19,7 @@ import pl.edu.agh.gem.exception.UserWithoutGroupAccessException
 import pl.edu.agh.gem.external.dto.group.CurrencyDTO
 import pl.edu.agh.gem.external.dto.payment.PaymentResponse
 import pl.edu.agh.gem.external.dto.payment.toAmountDto
+import pl.edu.agh.gem.external.dto.payment.toDto
 import pl.edu.agh.gem.helper.group.DummyGroup.GROUP_ID
 import pl.edu.agh.gem.helper.group.DummyGroup.OTHER_GROUP_ID
 import pl.edu.agh.gem.helper.user.DummyUser.EMAIL
@@ -34,6 +35,7 @@ import pl.edu.agh.gem.integration.ability.stubGroupManagerGroupData
 import pl.edu.agh.gem.integration.ability.stubGroupManagerUserGroups
 import pl.edu.agh.gem.internal.model.payment.PaymentAction
 import pl.edu.agh.gem.internal.model.payment.PaymentAction.EDITED
+import pl.edu.agh.gem.internal.model.payment.PaymentStatus.ACCEPTED
 import pl.edu.agh.gem.internal.model.payment.PaymentStatus.PENDING
 import pl.edu.agh.gem.internal.persistence.PaymentRepository
 import pl.edu.agh.gem.internal.service.MissingPaymentException
@@ -287,7 +289,7 @@ class ExternalPaymentControllerIT(
             title shouldBe payment.title
             type shouldBe payment.type.name
             amount shouldBe payment.amount.toAmountDto()
-            fxData shouldBe payment.fxData
+            fxData shouldBe payment.fxData?.toDto()
             date shouldBe payment.date
             createdAt.shouldNotBeNull()
             updatedAt.shouldNotBeNull()
@@ -337,6 +339,26 @@ class ExternalPaymentControllerIT(
 
         // then
         response shouldHaveHttpStatus OK
+        response.shouldBody<PaymentResponse> {
+            paymentId shouldBe PAYMENT_ID
+            creatorId shouldBe USER_ID
+            title shouldBe payment.title
+            type shouldBe payment.type.name
+            amount shouldBe payment.amount.toAmountDto()
+            fxData shouldBe payment.fxData?.toDto()
+            date shouldBe payment.date
+            createdAt shouldBe payment.createdAt
+            updatedAt.shouldNotBeNull()
+            attachmentId shouldBe payment.attachmentId
+            recipientId shouldBe payment.recipientId
+            status shouldBe ACCEPTED.name
+            history.last().also { history ->
+                history.participantId shouldBe OTHER_USER_ID
+                history.createdAt.shouldNotBeNull()
+                history.paymentAction shouldBe PaymentAction.ACCEPTED.name
+                history.comment shouldBe decisionRequest.message
+            }
+        }
     }
 
     context("return validation exception when decide cause:") {
