@@ -8,7 +8,6 @@ import pl.edu.agh.gem.helper.group.DummyGroup.GROUP_ID
 import pl.edu.agh.gem.helper.user.DummyUser.USER_ID
 import pl.edu.agh.gem.internal.model.payment.PaymentAction.CREATED
 import pl.edu.agh.gem.internal.model.payment.PaymentStatus.PENDING
-import pl.edu.agh.gem.util.DummyData.ATTACHMENT_ID
 import pl.edu.agh.gem.util.createFxData
 import pl.edu.agh.gem.util.createPaymentCreation
 
@@ -19,7 +18,7 @@ class PaymentCreationTest : ShouldSpec({
         val paymentCreation = createPaymentCreation()
 
         // when
-        val payment = paymentCreation.toPayment(createFxData(), ATTACHMENT_ID)
+        val payment = paymentCreation.toPayment(createFxData())
 
         // then
         payment.shouldNotBeNull()

@@ -28,7 +28,6 @@ import pl.edu.agh.gem.helper.user.DummyUser.USER_ID
 import pl.edu.agh.gem.helper.user.createGemUser
 import pl.edu.agh.gem.integration.BaseIntegrationSpec
 import pl.edu.agh.gem.integration.ability.ServiceTestClient
-import pl.edu.agh.gem.integration.ability.stubAttachmentStoreGenerateBlankAttachment
 import pl.edu.agh.gem.integration.ability.stubCurrencyManagerAvailableCurrencies
 import pl.edu.agh.gem.integration.ability.stubCurrencyManagerExchangeRate
 import pl.edu.agh.gem.integration.ability.stubGroupManagerGroupData
@@ -49,7 +48,6 @@ import pl.edu.agh.gem.util.createAmountDto
 import pl.edu.agh.gem.util.createCurrenciesDTO
 import pl.edu.agh.gem.util.createCurrenciesResponse
 import pl.edu.agh.gem.util.createExchangeRateResponse
-import pl.edu.agh.gem.util.createGroupAttachmentResponse
 import pl.edu.agh.gem.util.createGroupResponse
 import pl.edu.agh.gem.util.createMembersDTO
 import pl.edu.agh.gem.util.createPayment
@@ -88,7 +86,7 @@ class ExternalPaymentControllerIT(
     private val paymentRepository: PaymentRepository,
 ) : BaseIntegrationSpec({
 
-    should("create payment when attachmentId is provided") {
+    should("create payment") {
         // given
         val paymentCreationRequest = createPaymentCreationRequest()
         stubGroupManagerGroupData(createGroupResponse(groupCurrencies = createCurrenciesDTO(CURRENCY_2)), GROUP_ID)
@@ -120,51 +118,6 @@ class ExternalPaymentControllerIT(
             createdAt.shouldNotBeNull()
             updatedAt.shouldNotBeNull()
             attachmentId shouldBe paymentCreationRequest.attachmentId
-            status shouldBe PENDING.name
-            history.first().also {
-                it.createdAt.shouldNotBeNull()
-                it.participantId shouldBe USER_ID
-                it.paymentAction shouldBe PaymentAction.CREATED.name
-                it.comment shouldBe paymentCreationRequest.message
-            }
-        }
-    }
-
-    should("create payment when attachmentId is not provided") {
-        // given
-        val paymentCreationRequest = createPaymentCreationRequest(attachmentId = null)
-        val attachment = createGroupAttachmentResponse()
-
-        stubGroupManagerGroupData(createGroupResponse(groupCurrencies = createCurrenciesDTO(CURRENCY_2)), GROUP_ID)
-        stubCurrencyManagerAvailableCurrencies(createCurrenciesResponse(CURRENCY_1, CURRENCY_2))
-        stubCurrencyManagerExchangeRate(
-            createExchangeRateResponse(value = EXCHANGE_RATE_VALUE),
-            CURRENCY_1,
-            CURRENCY_2,
-            Instant.ofEpochSecond(0L).atZone(ZoneId.systemDefault()).toLocalDate(),
-        )
-        stubAttachmentStoreGenerateBlankAttachment(attachment, GROUP_ID, USER_ID)
-
-        // when
-        val response = service.createPayment(paymentCreationRequest, createGemUser(USER_ID), GROUP_ID)
-
-        // then
-        response shouldHaveHttpStatus CREATED
-        response.shouldBody<PaymentResponse> {
-            paymentId.shouldNotBeNull()
-            creatorId shouldBe USER_ID
-            recipientId shouldBe paymentCreationRequest.recipientId
-            title shouldBe paymentCreationRequest.title
-            type shouldBe paymentCreationRequest.type.name
-            amount shouldBe paymentCreationRequest.amount
-            fxData?.also { fxData ->
-                fxData.targetCurrency shouldBe paymentCreationRequest.targetCurrency
-                fxData.exchangeRate.shouldNotBeNull()
-            }
-            date shouldBe paymentCreationRequest.date
-            createdAt.shouldNotBeNull()
-            updatedAt.shouldNotBeNull()
-            attachmentId.shouldNotBeNull()
             status shouldBe PENDING.name
             history.first().also {
                 it.createdAt.shouldNotBeNull()

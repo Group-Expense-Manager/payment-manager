@@ -21,10 +21,8 @@ import pl.edu.agh.gem.helper.group.DummyGroup.GROUP_ID
 import pl.edu.agh.gem.helper.group.createGroupMembers
 import pl.edu.agh.gem.helper.user.DummyUser.OTHER_USER_ID
 import pl.edu.agh.gem.helper.user.DummyUser.USER_ID
-import pl.edu.agh.gem.internal.client.AttachmentStoreClient
 import pl.edu.agh.gem.internal.client.CurrencyManagerClient
 import pl.edu.agh.gem.internal.client.GroupManagerClient
-import pl.edu.agh.gem.internal.model.attachment.GroupAttachment
 import pl.edu.agh.gem.internal.model.payment.Payment
 import pl.edu.agh.gem.internal.model.payment.PaymentAction
 import pl.edu.agh.gem.internal.model.payment.PaymentAction.CREATED
@@ -34,7 +32,6 @@ import pl.edu.agh.gem.internal.model.payment.PaymentStatus.PENDING
 import pl.edu.agh.gem.internal.persistence.ArchivedPaymentRepository
 import pl.edu.agh.gem.internal.persistence.PaymentRepository
 import pl.edu.agh.gem.util.DummyData.ANOTHER_USER_ID
-import pl.edu.agh.gem.util.DummyData.ATTACHMENT_ID
 import pl.edu.agh.gem.util.DummyData.CURRENCY_1
 import pl.edu.agh.gem.util.DummyData.CURRENCY_2
 import pl.edu.agh.gem.util.DummyData.EXCHANGE_RATE_VALUE
@@ -65,19 +62,17 @@ import java.time.LocalDate
 class PaymentServiceTest : ShouldSpec({
     val groupManagerClient = mock<GroupManagerClient> { }
     val currencyManagerClient = mock<CurrencyManagerClient> {}
-    val attachmentStoreClient = mock<AttachmentStoreClient> {}
     val paymentRepository = mock<PaymentRepository> {}
     val archivedPaymentRepository = mock<ArchivedPaymentRepository> {}
 
     val paymentService = PaymentService(
         groupManagerClient,
         currencyManagerClient,
-        attachmentStoreClient,
         paymentRepository,
         archivedPaymentRepository,
     )
 
-    should("create payment when attachmentId is provided") {
+    should("create payment") {
         // given
         val paymentCreation = createPaymentCreation()
         val group = createGroup(currencies = createCurrencies(CURRENCY_1, CURRENCY_2))
@@ -117,51 +112,6 @@ class PaymentServiceTest : ShouldSpec({
 
         verify(currencyManagerClient, times(1)).getAvailableCurrencies()
         verify(currencyManagerClient, times(1)).getExchangeRate(eq(CURRENCY_1), eq(CURRENCY_2), anyVararg(LocalDate::class))
-        verify(paymentRepository, times(1)).save(anyVararg(Payment::class))
-    }
-
-    should("create payment when attachmentId is not provided") {
-        // given
-        val paymentCreation = createPaymentCreation(attachmentId = null)
-        val group = createGroup(currencies = createCurrencies(CURRENCY_1, CURRENCY_2))
-        val exchangeRate = createExchangeRate()
-        whenever(currencyManagerClient.getAvailableCurrencies()).thenReturn(createCurrencies(CURRENCY_1, CURRENCY_2))
-        whenever(currencyManagerClient.getExchangeRate(eq(CURRENCY_1), eq(CURRENCY_2), anyVararg(LocalDate::class))).thenReturn(exchangeRate)
-        whenever(attachmentStoreClient.generateBlankAttachment(GROUP_ID, USER_ID)).thenReturn(GroupAttachment(ATTACHMENT_ID))
-        whenever(paymentRepository.save(anyVararg(Payment::class))).thenAnswer { it.arguments[0] }
-
-        // when
-        val result = paymentService.createPayment(group, paymentCreation)
-
-        // then
-        result.also {
-            it.id.shouldNotBeNull()
-            it.groupId shouldBe GROUP_ID
-            it.creatorId shouldBe USER_ID
-            it.recipientId shouldBe paymentCreation.recipientId
-            it.title shouldBe paymentCreation.title
-            it.type shouldBe paymentCreation.type
-            it.amount shouldBe paymentCreation.amount
-            it.fxData.also { fxData ->
-                fxData?.targetCurrency shouldBe paymentCreation.targetCurrency
-                fxData?.exchangeRate shouldBe exchangeRate.value
-            }
-            it.createdAt.shouldNotBeNull()
-            it.updatedAt.shouldNotBeNull()
-            it.attachmentId shouldBe ATTACHMENT_ID
-            it.status shouldBe PENDING
-            it.history shouldHaveSize 1
-            it.history.first().also { entry ->
-                entry.createdAt.shouldNotBeNull()
-                entry.paymentAction shouldBe CREATED
-                entry.participantId shouldBe USER_ID
-                entry.comment shouldBe paymentCreation.message
-            }
-        }
-
-        verify(currencyManagerClient, times(1)).getAvailableCurrencies()
-        verify(currencyManagerClient, times(1)).getExchangeRate(eq(CURRENCY_1), eq(CURRENCY_2), anyVararg(LocalDate::class))
-        verify(attachmentStoreClient, times(1)).generateBlankAttachment(GROUP_ID, USER_ID)
         verify(paymentRepository, times(1)).save(anyVararg(Payment::class))
     }
 

@@ -1,7 +1,6 @@
 package pl.edu.agh.gem.internal.service
 
 import org.springframework.stereotype.Service
-import pl.edu.agh.gem.internal.client.AttachmentStoreClient
 import pl.edu.agh.gem.internal.client.CurrencyManagerClient
 import pl.edu.agh.gem.internal.client.GroupManagerClient
 import pl.edu.agh.gem.internal.mapper.BalanceElementMapper
@@ -42,7 +41,6 @@ import java.time.ZoneId
 class PaymentService(
     private val groupManagerClient: GroupManagerClient,
     private val currencyManagerClient: CurrencyManagerClient,
-    private val attachmentStoreClient: AttachmentStoreClient,
     private val paymentRepository: PaymentRepository,
     private val archivedPaymentRepository: ArchivedPaymentRepository,
 ) {
@@ -76,13 +74,10 @@ class PaymentService(
             paymentCreation.targetCurrency,
             paymentCreation.date.atZone(ZoneId.systemDefault()).toLocalDate(),
         )
-        val attachmentId = paymentCreation.attachmentId
-            ?: attachmentStoreClient.generateBlankAttachment(paymentCreation.groupId, paymentCreation.creatorId).id
 
         return paymentRepository.save(
             paymentCreation.toPayment(
                 fxData = fxData,
-                attachmentId = attachmentId,
             ),
         )
     }
@@ -184,7 +179,7 @@ class PaymentService(
                 updatedAt = now(),
                 status = PENDING,
                 history = originalPayment.history + PaymentHistoryEntry(originalPayment.creatorId, EDITED, now(), update.message),
-
+                attachmentId = update.attachmentId,
             ),
         )
     }

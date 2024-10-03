@@ -12,4 +12,5 @@ data class PaymentUpdate(
     val targetCurrency: String?,
     val date: Instant,
     val message: String?,
+    val attachmentId: String?,
 )

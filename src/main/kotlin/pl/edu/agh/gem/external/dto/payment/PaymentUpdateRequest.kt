@@ -9,6 +9,7 @@ import pl.edu.agh.gem.annotation.nullorblank.NullOrNotBlank
 import pl.edu.agh.gem.annotation.nullorpattern.NullOrPattern
 import pl.edu.agh.gem.internal.model.payment.PaymentType
 import pl.edu.agh.gem.internal.model.payment.PaymentUpdate
+import pl.edu.agh.gem.validation.ValidationMessage.ATTACHMENT_ID_NULL_OR_NOT_BLANK
 import pl.edu.agh.gem.validation.ValidationMessage.MESSAGE_NULL_OR_NOT_BLANK
 import pl.edu.agh.gem.validation.ValidationMessage.TARGET_CURRENCY_PATTERN
 import pl.edu.agh.gem.validation.ValidationMessage.TITLE_MAX_LENGTH
@@ -28,6 +29,8 @@ data class PaymentUpdateRequest(
     val date: Instant,
     @field:NullOrNotBlank(message = MESSAGE_NULL_OR_NOT_BLANK)
     val message: String? = null,
+    @field:NullOrNotBlank(message = ATTACHMENT_ID_NULL_OR_NOT_BLANK)
+    val attachmentId: String?,
 ) {
     fun toDomain(paymentId: String, groupId: String, userId: String) = PaymentUpdate(
         id = paymentId,
@@ -39,5 +42,6 @@ data class PaymentUpdateRequest(
         targetCurrency = targetCurrency,
         date = date,
         message = message,
+        attachmentId = attachmentId,
     )
 }
