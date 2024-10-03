@@ -16,7 +16,7 @@ data class PaymentResponse(
     val date: Instant,
     val createdAt: Instant,
     val updatedAt: Instant,
-    val attachmentId: String,
+    val attachmentId: String?,
     val status: String,
     val history: List<PaymentHistoryDto>,
 )

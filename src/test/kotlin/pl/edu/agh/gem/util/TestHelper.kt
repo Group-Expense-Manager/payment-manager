@@ -1,6 +1,5 @@
 package pl.edu.agh.gem.util
 
-import pl.edu.agh.gem.external.dto.attachment.GroupAttachmentResponse
 import pl.edu.agh.gem.external.dto.currency.CurrenciesResponse
 import pl.edu.agh.gem.external.dto.currency.ExchangeRateResponse
 import pl.edu.agh.gem.external.dto.group.CurrencyDTO
@@ -117,7 +116,7 @@ fun createPaymentEntity(
     date: Instant = Instant.ofEpochMilli(0L),
     createdAt: Instant = Instant.ofEpochMilli(10),
     updatedAt: Instant = Instant.ofEpochMilli(20),
-    attachmentId: String = ATTACHMENT_ID,
+    attachmentId: String? = ATTACHMENT_ID,
     status: PaymentStatus = PENDING,
     history: List<PaymentHistoryEntry> = arrayListOf(PaymentHistoryEntry(USER_ID, CREATED)),
 ) = PaymentEntity(
@@ -165,7 +164,7 @@ fun createPayment(
     date: Instant = Instant.ofEpochMilli(0L),
     createdAt: Instant = Instant.ofEpochMilli(10),
     updatedAt: Instant = Instant.ofEpochMilli(20),
-    attachmentId: String = ATTACHMENT_ID,
+    attachmentId: String? = ATTACHMENT_ID,
     status: PaymentStatus = PENDING,
     history: List<PaymentHistoryEntry> = arrayListOf(PaymentHistoryEntry(USER_ID, CREATED)),
 ) = Payment(
@@ -236,12 +235,6 @@ fun createGroup(
     currencies = currencies,
 )
 
-fun createGroupAttachmentResponse(
-    attachmentId: String = ATTACHMENT_ID,
-) = GroupAttachmentResponse(
-    id = attachmentId,
-)
-
 fun createPaymentDecisionRequest(
     paymentId: String = PAYMENT_ID,
     groupId: String = GROUP_ID,
@@ -275,6 +268,7 @@ fun createPaymentUpdateRequest(
     targetCurrency: String? = CURRENCY_2,
     date: Instant = Instant.ofEpochMilli(0L),
     message: String? = "edited",
+    attachmentId: String? = ATTACHMENT_ID,
 ) = PaymentUpdateRequest(
     title = title,
     type = type,
@@ -282,6 +276,7 @@ fun createPaymentUpdateRequest(
     targetCurrency = targetCurrency,
     date = date,
     message = message,
+    attachmentId = attachmentId,
 )
 
 fun createPaymentUpdate(
@@ -294,6 +289,7 @@ fun createPaymentUpdate(
     targetCurrency: String? = CURRENCY_2,
     date: Instant = Instant.ofEpochMilli(0L),
     message: String? = "Something",
+    attachmentId: String? = ATTACHMENT_ID,
 ) = PaymentUpdate(
     id = id,
     groupId = groupId,
@@ -304,6 +300,8 @@ fun createPaymentUpdate(
     targetCurrency = targetCurrency,
     date = date,
     message = message,
+    attachmentId = attachmentId,
+
 )
 
 fun createPaymentUpdateFromPayment(
@@ -318,6 +316,7 @@ fun createPaymentUpdateFromPayment(
     targetCurrency = payment.fxData?.targetCurrency,
     date = payment.date,
     message = null,
+    attachmentId = payment.attachmentId,
 )
 
 fun createPaymentUpdateRequestFromPayment(
@@ -329,6 +328,7 @@ fun createPaymentUpdateRequestFromPayment(
     targetCurrency = payment.fxData?.targetCurrency,
     date = payment.date,
     message = null,
+    attachmentId = payment.attachmentId,
 )
 
 fun createFilterOptions(

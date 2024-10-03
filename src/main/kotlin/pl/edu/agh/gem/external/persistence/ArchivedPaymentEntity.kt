@@ -23,7 +23,7 @@ data class ArchivedPaymentEntity(
     val date: Instant,
     val createdAt: Instant,
     val updatedAt: Instant,
-    val attachmentId: String,
+    val attachmentId: String?,
     val status: PaymentStatus,
     val history: List<PaymentHistoryEntry>,
 )

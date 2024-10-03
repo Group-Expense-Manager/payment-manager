@@ -18,7 +18,7 @@ data class PaymentCreation(
     val message: String? = null,
     val attachmentId: String?,
 ) {
-    fun toPayment(fxData: FxData?, attachmentId: String) = Payment(
+    fun toPayment(fxData: FxData?) = Payment(
         id = randomUUID().toString(),
         groupId = groupId,
         creatorId = creatorId,
