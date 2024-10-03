@@ -15,7 +15,7 @@ data class GroupActivityDTO(
     val recipientId: String,
     val title: String,
     val amount: AmountDto,
-    val targetCurrency: String?,
+    val fxData: FxDataDto?,
     val status: PaymentStatus,
     val date: Instant,
 ) {
@@ -26,7 +26,7 @@ data class GroupActivityDTO(
             recipientId = payment.recipientId,
             title = payment.title,
             amount = payment.amount.toAmountDto(),
-            targetCurrency = payment.fxData?.targetCurrency,
+            fxData = payment.fxData?.toDto(),
             status = payment.status,
             date = payment.date,
         )
