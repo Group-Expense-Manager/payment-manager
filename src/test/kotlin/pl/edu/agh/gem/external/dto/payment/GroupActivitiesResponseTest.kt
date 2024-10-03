@@ -6,11 +6,11 @@ import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import pl.edu.agh.gem.helper.group.DummyGroup.GROUP_ID
 import pl.edu.agh.gem.internal.model.payment.Amount
+import pl.edu.agh.gem.internal.model.payment.FxData
 import pl.edu.agh.gem.internal.model.payment.Payment
 import pl.edu.agh.gem.internal.model.payment.PaymentStatus.ACCEPTED
 import pl.edu.agh.gem.internal.model.payment.PaymentStatus.PENDING
 import pl.edu.agh.gem.internal.model.payment.PaymentStatus.REJECTED
-import pl.edu.agh.gem.util.createFxData
 import pl.edu.agh.gem.util.createPayment
 import java.math.BigDecimal
 import java.time.Instant
@@ -33,7 +33,7 @@ class GroupActivitiesResponseTest : ShouldSpec({
             it.recipientId shouldBe payment.recipientId
             it.title shouldBe payment.title
             it.amount shouldBe payment.amount.toAmountDto()
-            it.targetCurrency shouldBe payment.fxData?.targetCurrency
+            it.fxData shouldBe payment.fxData?.toDto()
             it.status shouldBe payment.status
             it.date shouldBe payment.date
         }
@@ -51,7 +51,13 @@ class GroupActivitiesResponseTest : ShouldSpec({
             Amount(value = BigDecimal.TWO, currency = "EUR"),
             Amount(value = BigDecimal.TEN, currency = "USD"),
         )
-        val targetCurrencies = listOf("EUR", null, "PLN")
+        val fxData = listOf(
+            FxData(targetCurrency = "EUR", exchangeRate = "2".toBigDecimal()),
+            null,
+            FxData(targetCurrency = "PLN", exchangeRate = "3".toBigDecimal()),
+
+        )
+
         val statuses = listOf(PENDING, ACCEPTED, REJECTED)
         val dates = listOf(
             Instant.ofEpochSecond(1000),
@@ -65,7 +71,7 @@ class GroupActivitiesResponseTest : ShouldSpec({
                 recipientId = recipientIds[index],
                 title = titles[index],
                 amount = amounts[index],
-                fxData = targetCurrencies[index]?.let { createFxData(it) },
+                fxData = fxData[index],
                 status = statuses[index],
                 date = dates[index],
             )
@@ -83,7 +89,7 @@ class GroupActivitiesResponseTest : ShouldSpec({
             it.map { groupPaymentsDto -> groupPaymentsDto.recipientId } shouldContainExactly recipientIds
             it.map { groupPaymentsDto -> groupPaymentsDto.title } shouldContainExactly titles
             it.map { groupPaymentsDto -> groupPaymentsDto.amount } shouldContainExactly amounts.map { amount -> amount.toAmountDto() }
-            it.map { groupPaymentsDto -> groupPaymentsDto.targetCurrency } shouldContainExactly targetCurrencies
+            it.map { groupPaymentsDto -> groupPaymentsDto.fxData } shouldContainExactly fxData.map { fxData -> fxData?.toDto() }
             it.map { groupPaymentsDto -> groupPaymentsDto.status } shouldContainExactly statuses
             it.map { groupPaymentsDto -> groupPaymentsDto.date } shouldContainExactly dates
         }

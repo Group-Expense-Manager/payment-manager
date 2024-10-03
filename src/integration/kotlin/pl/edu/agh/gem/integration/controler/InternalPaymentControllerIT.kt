@@ -61,7 +61,7 @@ class InternalPaymentControllerIT(
                 it.recipientId shouldBe payment.recipientId
                 it.title shouldBe payment.title
                 it.amount shouldBe payment.amount.toAmountDto()
-                it.targetCurrency shouldBe payment.fxData?.targetCurrency
+                it.fxData shouldBe payment.fxData?.toDto()
                 it.status shouldBe payment.status
                 it.date shouldBe payment.date
             }
