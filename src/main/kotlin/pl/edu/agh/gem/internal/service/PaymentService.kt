@@ -34,7 +34,6 @@ import pl.edu.agh.gem.validator.ValidatorsException
 import pl.edu.agh.gem.validator.alsoValidate
 import pl.edu.agh.gem.validator.validate
 import java.time.Instant.now
-import java.time.LocalDate
 import java.time.ZoneId
 
 @Service
@@ -69,11 +68,7 @@ class PaymentService(
             .takeIf { it.isNotEmpty() }
             ?.also { throw ValidatorsException(it) }
 
-        val fxData = getFxData(
-            paymentCreation.amount.currency,
-            paymentCreation.targetCurrency,
-            paymentCreation.date.atZone(ZoneId.systemDefault()).toLocalDate(),
-        )
+        val fxData = createFxData(paymentCreation)
 
         return paymentRepository.save(
             paymentCreation.toPayment(
@@ -99,13 +94,18 @@ class PaymentService(
         return paymentRepository.findByPaymentIdAndGroupId(paymentId, groupId) ?: throw MissingPaymentException(paymentId, groupId)
     }
 
-    private fun getFxData(baseCurrency: String, targetCurrency: String?, date: LocalDate) =
-        targetCurrency?.let {
+    private fun createFxData(paymentCreation: PaymentCreation) =
+        paymentCreation.targetCurrency?.let {
             FxData(
-                targetCurrency = targetCurrency,
-                exchangeRate = currencyManagerClient.getExchangeRate(baseCurrency, targetCurrency, date).value,
+                targetCurrency = paymentCreation.targetCurrency,
+                exchangeRate = currencyManagerClient.getExchangeRate(
+                    paymentCreation.amount.currency,
+                    paymentCreation.targetCurrency,
+                    paymentCreation.date.atZone(ZoneId.systemDefault()).toLocalDate(),
+                ).value,
             )
         }
+
     fun decide(paymentDecision: PaymentDecision): Payment {
         val payment = paymentRepository.findByPaymentIdAndGroupId(paymentDecision.paymentId, paymentDecision.groupId)
             ?: throw MissingPaymentException(paymentDecision.paymentId, paymentDecision.groupId)
@@ -170,11 +170,7 @@ class PaymentService(
                 title = update.title,
                 type = update.type,
                 amount = update.amount,
-                fxData = getFxData(
-                    update.amount.currency,
-                    update.targetCurrency,
-                    update.date.atZone(ZoneId.systemDefault()).toLocalDate(),
-                ),
+                fxData = updateFxData(originalPayment = originalPayment, paymentUpdate = update),
                 date = update.date,
                 updatedAt = now(),
                 status = PENDING,
@@ -182,6 +178,27 @@ class PaymentService(
                 attachmentId = update.attachmentId,
             ),
         )
+    }
+
+    private fun updateFxData(originalPayment: Payment, paymentUpdate: PaymentUpdate): FxData? {
+        if (shouldUseOriginalFxData(originalPayment, paymentUpdate)) {
+            return originalPayment.fxData
+        }
+        return paymentUpdate.targetCurrency?.let {
+            FxData(
+                targetCurrency = paymentUpdate.targetCurrency,
+                exchangeRate = currencyManagerClient.getExchangeRate(
+                    paymentUpdate.amount.currency,
+                    paymentUpdate.targetCurrency,
+                    paymentUpdate.date.atZone(ZoneId.systemDefault()).toLocalDate(),
+                ).value,
+            )
+        }
+    }
+
+    private fun shouldUseOriginalFxData(originalPayment: Payment, update: PaymentUpdate): Boolean {
+        return originalPayment.date == update.date && originalPayment.amount.currency == update.amount.currency &&
+            originalPayment.fxData?.targetCurrency == update.targetCurrency
     }
 
     private fun createPaymentUpdateDataWrapper(
