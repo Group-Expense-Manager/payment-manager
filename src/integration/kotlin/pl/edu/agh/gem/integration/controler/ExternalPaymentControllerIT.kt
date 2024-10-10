@@ -553,14 +553,17 @@ class ExternalPaymentControllerIT(
     should("update payment") {
         // given
         val payment = createPayment(id = PAYMENT_ID, groupId = GROUP_ID, creatorId = USER_ID)
-        val paymentUpdateRequest = createPaymentUpdateRequest(amount = createAmountDto(value = "6".toBigDecimal()))
+        val paymentUpdateRequest = createPaymentUpdateRequest(
+            amount = createAmountDto(value = "6".toBigDecimal(), currency = CURRENCY_2),
+            targetCurrency = CURRENCY_1,
+        )
         paymentRepository.save(payment)
         stubGroupManagerGroupData(createGroupResponse(members = createMembersDTO(USER_ID, OTHER_USER_ID, ANOTHER_USER_ID)), GROUP_ID)
         stubCurrencyManagerAvailableCurrencies(createCurrenciesResponse(CURRENCY_1, CURRENCY_2))
         stubCurrencyManagerExchangeRate(
             createExchangeRateResponse(value = EXCHANGE_RATE_VALUE),
-            CURRENCY_1,
             CURRENCY_2,
+            CURRENCY_1,
             Instant.ofEpochSecond(0L).atZone(ZoneId.systemDefault()).toLocalDate(),
         )
         // when
@@ -624,12 +627,6 @@ class ExternalPaymentControllerIT(
         paymentRepository.save(payment)
         stubGroupManagerGroupData(createGroupResponse(members = createMembersDTO(USER_ID, OTHER_USER_ID, ANOTHER_USER_ID)), GROUP_ID)
         stubCurrencyManagerAvailableCurrencies(createCurrenciesResponse(CURRENCY_1, CURRENCY_2))
-        stubCurrencyManagerExchangeRate(
-            createExchangeRateResponse(value = EXCHANGE_RATE_VALUE),
-            CURRENCY_1,
-            CURRENCY_2,
-            Instant.ofEpochSecond(0L).atZone(ZoneId.systemDefault()).toLocalDate(),
-        )
         // when
         val response = service.updatePayment(paymentUpdateRequest, createGemUser(USER_ID), GROUP_ID, PAYMENT_ID)
 

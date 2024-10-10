@@ -290,12 +290,12 @@ class PaymentServiceTest : ShouldSpec({
     should("update payment") {
         // given
         val payment = createPayment(id = PAYMENT_ID, groupId = GROUP_ID, creatorId = USER_ID)
-        val paymentUpdate = createPaymentUpdate(amount = createAmount(value = BigDecimal(6)))
+        val paymentUpdate = createPaymentUpdate(amount = createAmount(value = BigDecimal(6), currency = CURRENCY_2), targetCurrency = CURRENCY_1)
 
         val exchangeRate = createExchangeRate(EXCHANGE_RATE_VALUE)
         val group = createGroup(createGroupMembers(USER_ID, OTHER_USER_ID, ANOTHER_USER_ID), currencies = createCurrencies(CURRENCY_1, CURRENCY_2))
         whenever(paymentRepository.findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)).thenReturn(payment)
-        whenever(currencyManagerClient.getExchangeRate(eq(CURRENCY_1), eq(CURRENCY_2), anyVararg(LocalDate::class))).thenReturn(exchangeRate)
+        whenever(currencyManagerClient.getExchangeRate(eq(CURRENCY_2), eq(CURRENCY_1), anyVararg(LocalDate::class))).thenReturn(exchangeRate)
         whenever(currencyManagerClient.getAvailableCurrencies()).thenReturn(createCurrencies(CURRENCY_1, CURRENCY_2))
         whenever(paymentRepository.save(anyVararg(Payment::class))).doAnswer { it.arguments[0] as? Payment }
 
@@ -304,7 +304,7 @@ class PaymentServiceTest : ShouldSpec({
         verify(paymentRepository, times(1)).findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)
         verify(currencyManagerClient, times(1)).getAvailableCurrencies()
         verify(paymentRepository, times(1)).save(anyVararg(Payment::class))
-        verify(currencyManagerClient, times(1)).getExchangeRate(eq(CURRENCY_1), eq(CURRENCY_2), anyVararg(LocalDate::class))
+        verify(currencyManagerClient, times(1)).getExchangeRate(eq(CURRENCY_2), eq(CURRENCY_1), anyVararg(LocalDate::class))
 
         result.also {
             it.id shouldBe PAYMENT_ID
@@ -341,7 +341,6 @@ class PaymentServiceTest : ShouldSpec({
         val exchangeRate = createExchangeRate(EXCHANGE_RATE_VALUE)
         val group = createGroup(createGroupMembers(USER_ID, OTHER_USER_ID, ANOTHER_USER_ID), currencies = createCurrencies(CURRENCY_1, CURRENCY_2))
         whenever(paymentRepository.findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)).thenReturn(payment)
-        whenever(currencyManagerClient.getExchangeRate(eq(CURRENCY_1), eq(CURRENCY_2), anyVararg(LocalDate::class))).thenReturn(exchangeRate)
         whenever(currencyManagerClient.getAvailableCurrencies()).thenReturn(createCurrencies(CURRENCY_1, CURRENCY_2))
         whenever(paymentRepository.save(anyVararg(Payment::class))).doAnswer { it.arguments[0] as? Payment }
 
@@ -350,7 +349,7 @@ class PaymentServiceTest : ShouldSpec({
         verify(paymentRepository, times(1)).findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)
         verify(currencyManagerClient, times(1)).getAvailableCurrencies()
         verify(paymentRepository, times(1)).save(anyVararg(Payment::class))
-        verify(currencyManagerClient, times(1)).getExchangeRate(eq(CURRENCY_1), eq(CURRENCY_2), anyVararg(LocalDate::class))
+        verify(currencyManagerClient, times(0)).getExchangeRate(eq(CURRENCY_1), eq(CURRENCY_2), anyVararg(LocalDate::class))
 
         result.also {
             it.id shouldBe PAYMENT_ID
