@@ -7,6 +7,7 @@ import pl.edu.agh.gem.internal.model.payment.PaymentStatus
 import pl.edu.agh.gem.internal.model.payment.PaymentStatus.ACCEPTED
 import pl.edu.agh.gem.internal.model.payment.PaymentStatus.PENDING
 import pl.edu.agh.gem.internal.model.payment.PaymentStatus.REJECTED
+import pl.edu.agh.gem.util.Triple
 
 class PaymentStatusTest : ShouldSpec({
 
@@ -18,6 +19,48 @@ class PaymentStatusTest : ShouldSpec({
         ) { (statuses, expectedStatus) ->
             // when
             val result = PaymentStatus.reduce(statuses)
+
+            // then
+            result shouldBe expectedStatus
+        }
+    }
+
+    context("return changedToAccepted correctly") {
+        withData(
+            Triple(ACCEPTED, ACCEPTED, false),
+            Triple(ACCEPTED, REJECTED, false),
+            Triple(ACCEPTED, PENDING, false),
+            Triple(REJECTED, ACCEPTED, true),
+            Triple(REJECTED, REJECTED, false),
+            Triple(REJECTED, PENDING, false),
+            Triple(PENDING, ACCEPTED, true),
+            Triple(PENDING, REJECTED, false),
+            Triple(PENDING, PENDING, false),
+
+        ) { (previous, current, expectedStatus) ->
+            // when
+            val result = previous.changedToAccepted(current)
+
+            // then
+            result shouldBe expectedStatus
+        }
+    }
+
+    context("return changedFromAccepted correctly") {
+        withData(
+            Triple(ACCEPTED, ACCEPTED, false),
+            Triple(ACCEPTED, REJECTED, true),
+            Triple(ACCEPTED, PENDING, true),
+            Triple(REJECTED, ACCEPTED, false),
+            Triple(REJECTED, REJECTED, false),
+            Triple(REJECTED, PENDING, false),
+            Triple(PENDING, ACCEPTED, false),
+            Triple(PENDING, REJECTED, false),
+            Triple(PENDING, PENDING, false),
+
+        ) { (previous, current, expectedStatus) ->
+            // when
+            val result = current.changedFromAccepted(previous)
 
             // then
             result shouldBe expectedStatus

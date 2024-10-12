@@ -22,13 +22,17 @@ import pl.edu.agh.gem.helper.group.createGroupMembers
 import pl.edu.agh.gem.helper.user.DummyUser.OTHER_USER_ID
 import pl.edu.agh.gem.helper.user.DummyUser.USER_ID
 import pl.edu.agh.gem.internal.client.CurrencyManagerClient
+import pl.edu.agh.gem.internal.client.FinanceAdapterClient
 import pl.edu.agh.gem.internal.client.GroupManagerClient
+import pl.edu.agh.gem.internal.model.currency.Currency
+import pl.edu.agh.gem.internal.model.payment.Decision.ACCEPT
+import pl.edu.agh.gem.internal.model.payment.Decision.REJECT
 import pl.edu.agh.gem.internal.model.payment.Payment
-import pl.edu.agh.gem.internal.model.payment.PaymentAction
 import pl.edu.agh.gem.internal.model.payment.PaymentAction.CREATED
 import pl.edu.agh.gem.internal.model.payment.PaymentAction.EDITED
 import pl.edu.agh.gem.internal.model.payment.PaymentStatus.ACCEPTED
 import pl.edu.agh.gem.internal.model.payment.PaymentStatus.PENDING
+import pl.edu.agh.gem.internal.model.payment.PaymentStatus.REJECTED
 import pl.edu.agh.gem.internal.persistence.ArchivedPaymentRepository
 import pl.edu.agh.gem.internal.persistence.PaymentRepository
 import pl.edu.agh.gem.util.DummyData.ANOTHER_USER_ID
@@ -36,6 +40,7 @@ import pl.edu.agh.gem.util.DummyData.CURRENCY_1
 import pl.edu.agh.gem.util.DummyData.CURRENCY_2
 import pl.edu.agh.gem.util.DummyData.EXCHANGE_RATE_VALUE
 import pl.edu.agh.gem.util.DummyData.PAYMENT_ID
+import pl.edu.agh.gem.util.Triple
 import pl.edu.agh.gem.util.createAmount
 import pl.edu.agh.gem.util.createCurrencies
 import pl.edu.agh.gem.util.createExchangeRate
@@ -62,12 +67,14 @@ import java.time.LocalDate
 class PaymentServiceTest : ShouldSpec({
     val groupManagerClient = mock<GroupManagerClient> { }
     val currencyManagerClient = mock<CurrencyManagerClient> {}
+    val financeAdapterClient = mock<FinanceAdapterClient> {}
     val paymentRepository = mock<PaymentRepository> {}
     val archivedPaymentRepository = mock<ArchivedPaymentRepository> {}
 
     val paymentService = PaymentService(
         groupManagerClient,
         currencyManagerClient,
+        financeAdapterClient,
         paymentRepository,
         archivedPaymentRepository,
     )
@@ -183,42 +190,52 @@ class PaymentServiceTest : ShouldSpec({
         verify(paymentRepository, times(1)).findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)
     }
 
-    should("decide") {
-        // given
-        val payment = createPayment()
-        whenever(paymentRepository.findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)).thenReturn(payment)
-        whenever(paymentRepository.save(anyVararg(Payment::class))).thenAnswer { it.arguments[0] }
+    context("decide ") {
+        withData(
+            nameFn = { "when payment was ${it.first} and decision is: ${it.second}" },
+            Triple(ACCEPTED, REJECT, 1),
+            Triple(REJECTED, ACCEPT, 1),
+            Triple(ACCEPTED, ACCEPT, 0),
+            Triple(PENDING, REJECT, 0),
 
-        val paymentDecision = createPaymentDecision(userId = OTHER_USER_ID)
+        ) { (status, decision, timesInvoked) ->
+            // given
+            val payment = createPayment(status = status)
+            whenever(paymentRepository.findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)).thenReturn(payment)
+            whenever(paymentRepository.save(anyVararg(Payment::class))).thenAnswer { it.arguments[0] }
 
-        // when
-        val result = paymentService.decide(paymentDecision)
+            val paymentDecision = createPaymentDecision(userId = OTHER_USER_ID, decision = decision)
 
-        // then
-        result.also {
-            it.id shouldBe PAYMENT_ID
-            it.groupId shouldBe GROUP_ID
-            it.creatorId shouldBe USER_ID
-            it.title shouldBe payment.title
-            it.type shouldBe payment.type
-            it.amount shouldBe payment.amount
-            it.fxData shouldBe payment.fxData
-            it.date shouldBe payment.date
-            it.createdAt shouldBe payment.createdAt
-            it.updatedAt.shouldNotBeNull()
-            it.attachmentId shouldBe payment.attachmentId
-            it.recipientId shouldBe payment.recipientId
-            it.status shouldBe ACCEPTED
-            it.history shouldContainAll payment.history
-            it.history.last().also { history ->
-                history.participantId shouldBe OTHER_USER_ID
-                history.createdAt.shouldNotBeNull()
-                history.paymentAction shouldBe PaymentAction.ACCEPTED
-                history.comment shouldBe paymentDecision.message
+            // when
+            val result = paymentService.decide(paymentDecision)
+
+            // then
+            result.also {
+                it.id shouldBe PAYMENT_ID
+                it.groupId shouldBe GROUP_ID
+                it.creatorId shouldBe USER_ID
+                it.title shouldBe payment.title
+                it.type shouldBe payment.type
+                it.amount shouldBe payment.amount
+                it.fxData shouldBe payment.fxData
+                it.date shouldBe payment.date
+                it.createdAt shouldBe payment.createdAt
+                it.updatedAt.shouldNotBeNull()
+                it.attachmentId shouldBe payment.attachmentId
+                it.recipientId shouldBe payment.recipientId
+                it.status shouldBe decision.toPaymentStatus()
+                it.history shouldContainAll payment.history
+                it.history.last().also { history ->
+                    history.participantId shouldBe OTHER_USER_ID
+                    history.createdAt.shouldNotBeNull()
+                    history.paymentAction shouldBe decision.toPaymentAction()
+                    history.comment shouldBe paymentDecision.message
+                }
             }
+            verify(paymentRepository, times(1)).findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)
+            verify(paymentRepository, times(1)).save(anyVararg(Payment::class))
+            verify(financeAdapterClient, times(timesInvoked)).generate(eq(GROUP_ID), anyVararg(Currency::class))
         }
-        verify(paymentRepository, times(1)).findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)
-        verify(paymentRepository, times(1)).save(anyVararg(Payment::class))
     }
 
     should("throw MissingPaymentException when payment is not present") {
@@ -245,6 +262,36 @@ class PaymentServiceTest : ShouldSpec({
 
         verify(paymentRepository, times(1)).findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)
         verify(paymentRepository, times(0)).save(anyVararg(Payment::class))
+    }
+
+    should("delete payment that was ACCEPTED") {
+        // given
+        val payment = createPayment(id = PAYMENT_ID, groupId = GROUP_ID, creatorId = USER_ID, status = ACCEPTED)
+        whenever(paymentRepository.findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)).thenReturn(payment)
+
+        // when
+        paymentService.deletePayment(PAYMENT_ID, GROUP_ID, USER_ID)
+
+        // then
+        verify(paymentRepository, times(1)).findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)
+        verify(paymentRepository, times(1)).delete(payment)
+        verify(archivedPaymentRepository, times(1)).add(payment)
+        verify(financeAdapterClient, times(1)).generate(eq(GROUP_ID), anyVararg(Currency::class))
+    }
+
+    should("delete payment that was not ACCEPTED") {
+        // given
+        val payment = createPayment(id = PAYMENT_ID, groupId = GROUP_ID, creatorId = USER_ID, status = PENDING)
+        whenever(paymentRepository.findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)).thenReturn(payment)
+
+        // when
+        paymentService.deletePayment(PAYMENT_ID, GROUP_ID, USER_ID)
+
+        // then
+        verify(paymentRepository, times(1)).findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID)
+        verify(paymentRepository, times(1)).delete(payment)
+        verify(archivedPaymentRepository, times(1)).add(payment)
+        verify(financeAdapterClient, times(0)).generate(eq(GROUP_ID), anyVararg(Currency::class))
     }
 
     should("delete payment") {
@@ -287,9 +334,9 @@ class PaymentServiceTest : ShouldSpec({
         verify(archivedPaymentRepository, times(0)).add(payment)
     }
 
-    should("update payment") {
+    should("update payment that was ACCEPTED") {
         // given
-        val payment = createPayment(id = PAYMENT_ID, groupId = GROUP_ID, creatorId = USER_ID)
+        val payment = createPayment(id = PAYMENT_ID, groupId = GROUP_ID, creatorId = USER_ID, status = ACCEPTED)
         val paymentUpdate = createPaymentUpdate(amount = createAmount(value = BigDecimal(6), currency = CURRENCY_2), targetCurrency = CURRENCY_1)
 
         val exchangeRate = createExchangeRate(EXCHANGE_RATE_VALUE)
@@ -305,6 +352,7 @@ class PaymentServiceTest : ShouldSpec({
         verify(currencyManagerClient, times(1)).getAvailableCurrencies()
         verify(paymentRepository, times(1)).save(anyVararg(Payment::class))
         verify(currencyManagerClient, times(1)).getExchangeRate(eq(CURRENCY_2), eq(CURRENCY_1), anyVararg(LocalDate::class))
+        verify(financeAdapterClient, times(1)).generate(eq(GROUP_ID), anyVararg(Currency::class))
 
         result.also {
             it.id shouldBe PAYMENT_ID
@@ -333,7 +381,7 @@ class PaymentServiceTest : ShouldSpec({
         }
     }
 
-    should("update payment when data did not change") {
+    should("update payment when data did not change and status was not ACCEPTED") {
         // given
         val payment = createPayment(id = PAYMENT_ID, groupId = GROUP_ID, creatorId = USER_ID)
         val paymentUpdate = createPaymentUpdateFromPayment(payment)
@@ -350,6 +398,7 @@ class PaymentServiceTest : ShouldSpec({
         verify(currencyManagerClient, times(1)).getAvailableCurrencies()
         verify(paymentRepository, times(1)).save(anyVararg(Payment::class))
         verify(currencyManagerClient, times(0)).getExchangeRate(eq(CURRENCY_1), eq(CURRENCY_2), anyVararg(LocalDate::class))
+        verify(financeAdapterClient, times(0)).generate(eq(GROUP_ID), anyVararg(Currency::class))
 
         result.also {
             it.id shouldBe PAYMENT_ID
