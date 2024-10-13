@@ -9,7 +9,6 @@ import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
-import org.mockito.kotlin.any
 import org.mockito.kotlin.anyVararg
 import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.eq
@@ -510,18 +509,52 @@ class PaymentServiceTest : ShouldSpec({
 
     should("get accepted payments") {
         // given
-        val acceptedPayment = createPayment(status = ACCEPTED)
-        whenever(paymentRepository.findByGroupId(eq(GROUP_ID), any())).thenReturn(listOf(acceptedPayment))
+        val acceptedPayment1 = createPayment(
+            status = ACCEPTED,
+            amount = createAmount(currency = CURRENCY_1),
+            fxData = createFxData(targetCurrency = CURRENCY_2),
+        )
+        val acceptedPayment2 = createPayment(
+            status = ACCEPTED,
+            amount = createAmount(currency = CURRENCY_2),
+            fxData = null,
+        )
+        val payments = listOf(
+            acceptedPayment1,
+            acceptedPayment2,
 
+            createPayment(
+                status = ACCEPTED,
+                amount = createAmount(currency = CURRENCY_2),
+                fxData = createFxData(targetCurrency = CURRENCY_1),
+            ),
+            createPayment(
+                status = ACCEPTED,
+                amount = createAmount(currency = CURRENCY_1),
+                fxData = null,
+            ),
+            createPayment(
+                status = PENDING,
+                amount = createAmount(currency = CURRENCY_1),
+                fxData = createFxData(targetCurrency = CURRENCY_2),
+            ),
+            createPayment(
+                status = PENDING,
+                amount = createAmount(currency = CURRENCY_2),
+                fxData = null,
+            ),
+        )
+        whenever(paymentRepository.findByGroupId(GROUP_ID)).thenReturn(payments)
         // when
-        val result = paymentService.getAcceptedGroupPayments(GROUP_ID)
+        val result = paymentService.getAcceptedGroupPayments(GROUP_ID, CURRENCY_2)
 
         // then
         result.also {
-            it shouldHaveSize 1
-            it.first() shouldBe acceptedPayment
+            it shouldHaveSize 2
+            it.first() shouldBe acceptedPayment1
+            it.last() shouldBe acceptedPayment2
         }
-        verify(paymentRepository, times(1)).findByGroupId(eq(GROUP_ID), any())
+        verify(paymentRepository, times(1)).findByGroupId(GROUP_ID)
     }
 
     should("get user balance") {
@@ -557,7 +590,7 @@ class PaymentServiceTest : ShouldSpec({
             ),
 
         )
-        whenever(paymentRepository.findByGroupId(eq(GROUP_ID), any())).thenReturn(payments)
+        whenever(paymentRepository.findByGroupId(GROUP_ID)).thenReturn(payments)
 
         // when
         val result = paymentService.getUserBalance(GROUP_ID, USER_ID)
@@ -576,7 +609,7 @@ class PaymentServiceTest : ShouldSpec({
                 elem.exchangeRate.shouldBeNull()
             }
         }
-        verify(paymentRepository, times(1)).findByGroupId(eq(GROUP_ID), any())
+        verify(paymentRepository, times(1)).findByGroupId(GROUP_ID)
     }
 },)
 

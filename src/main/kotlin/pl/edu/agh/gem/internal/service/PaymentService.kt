@@ -255,12 +255,14 @@ class PaymentService(
         return paymentRepository.findByGroupId(groupId, filterOptions)
     }
 
-    fun getAcceptedGroupPayments(groupId: String): List<Payment> {
-        return paymentRepository.findByGroupId(groupId, acceptedPaymentsFilterOptions)
+    fun getAcceptedGroupPayments(groupId: String, currency: String): List<Payment> {
+        return paymentRepository.findByGroupId(groupId).filter {
+            it.status == ACCEPTED && (it.fxData?.targetCurrency ?: it.amount.currency) == currency
+        }
     }
 
     fun getUserBalance(groupId: String, userId: String): List<BalanceElement> {
-        return paymentRepository.findByGroupId(groupId, acceptedPaymentsFilterOptions)
+        return paymentRepository.findByGroupId(groupId)
             .mapNotNull { balanceElementMapper.mapToBalanceElement(userId = userId, payment = it) }
     }
 }
