@@ -7,8 +7,6 @@ import io.kotest.matchers.shouldBe
 import org.springframework.http.HttpStatus.OK
 import pl.edu.agh.gem.assertion.shouldBody
 import pl.edu.agh.gem.assertion.shouldHaveHttpStatus
-import pl.edu.agh.gem.dto.GroupMemberResponse
-import pl.edu.agh.gem.dto.GroupMembersResponse
 import pl.edu.agh.gem.external.dto.payment.AcceptedGroupPaymentsResponse
 import pl.edu.agh.gem.external.dto.payment.GroupActivitiesResponse
 import pl.edu.agh.gem.external.dto.payment.UserBalanceResponse
@@ -21,7 +19,6 @@ import pl.edu.agh.gem.helper.user.DummyUser.USER_ID
 import pl.edu.agh.gem.helper.user.createGemUser
 import pl.edu.agh.gem.integration.BaseIntegrationSpec
 import pl.edu.agh.gem.integration.ability.ServiceTestClient
-import pl.edu.agh.gem.integration.ability.stubGroupManagerUserGroups
 import pl.edu.agh.gem.internal.model.payment.PaymentStatus.ACCEPTED
 import pl.edu.agh.gem.internal.model.payment.PaymentStatus.PENDING
 import pl.edu.agh.gem.internal.model.payment.PaymentStatus.REJECTED
@@ -226,28 +223,73 @@ class InternalPaymentControllerIT(
 
     should("get accepted group payments") {
         // given
-        val groupMembers = GroupMembersResponse(listOf(GroupMemberResponse(USER_ID)))
-        stubGroupManagerUserGroups(groupMembers, GROUP_ID)
-        val payment = createPayment(id = "1", status = ACCEPTED)
+        val acceptedPayment1 = createPayment(
+            id = "1",
+            status = ACCEPTED,
+            amount = createAmount(currency = CURRENCY_1),
+            fxData = createFxData(targetCurrency = CURRENCY_2),
+        )
+        val acceptedPayment2 = createPayment(
+            id = "2",
+            status = ACCEPTED,
+            amount = createAmount(currency = CURRENCY_2),
+            fxData = null,
+        )
+        val paymentsToSave = listOf(
+            acceptedPayment1,
+            acceptedPayment2,
+            createPayment(
+                id = "3",
+                status = ACCEPTED,
+                amount = createAmount(currency = CURRENCY_2),
+                fxData = createFxData(targetCurrency = CURRENCY_1),
+            ),
+            createPayment(
+                id = "4",
+                status = ACCEPTED,
+                amount = createAmount(currency = CURRENCY_1),
+                fxData = null,
+            ),
+            createPayment(
+                id = "5",
+                status = PENDING,
+                amount = createAmount(currency = CURRENCY_1),
+                fxData = createFxData(targetCurrency = CURRENCY_2),
+            ),
+            createPayment(
+                id = "6",
+                status = PENDING,
+                amount = createAmount(currency = CURRENCY_2),
+                fxData = null,
+            ),
+        )
 
-        paymentRepository.save(payment)
-        paymentRepository.save(createPayment(id = "2", status = PENDING))
+        paymentsToSave.forEach { paymentRepository.save(it) }
 
         // when
-        val response = service.getAcceptedGroupPayments(GROUP_ID)
+        val response = service.getAcceptedGroupPayments(GROUP_ID, CURRENCY_2)
 
         // then
         response shouldHaveHttpStatus OK
         response.shouldBody<AcceptedGroupPaymentsResponse> {
             groupId shouldBe GROUP_ID
-            payments shouldHaveSize 1
+            payments shouldHaveSize 2
             payments.first().also {
-                it.creatorId shouldBe payment.creatorId
-                it.recipientId shouldBe payment.recipientId
-                it.title shouldBe payment.title
-                it.amount shouldBe payment.amount.toAmountDto()
-                it.fxData shouldBe payment.fxData?.toDto()
-                it.date shouldBe payment.date
+                it.creatorId shouldBe acceptedPayment1.creatorId
+                it.recipientId shouldBe acceptedPayment1.recipientId
+                it.title shouldBe acceptedPayment1.title
+                it.amount shouldBe acceptedPayment1.amount.toAmountDto()
+                it.fxData shouldBe acceptedPayment1.fxData?.toDto()
+                it.date shouldBe acceptedPayment1.date
+            }
+
+            payments.last().also {
+                it.creatorId shouldBe acceptedPayment2.creatorId
+                it.recipientId shouldBe acceptedPayment1.recipientId
+                it.title shouldBe acceptedPayment2.title
+                it.amount shouldBe acceptedPayment2.amount.toAmountDto()
+                it.fxData shouldBe acceptedPayment2.fxData?.toDto()
+                it.date shouldBe acceptedPayment2.date
             }
         }
     }

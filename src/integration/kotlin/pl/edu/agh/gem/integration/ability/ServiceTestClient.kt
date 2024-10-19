@@ -90,9 +90,9 @@ class ServiceTestClient(applicationContext: WebApplicationContext) {
             .exchange()
     }
 
-    fun getAcceptedGroupPayments(groupId: String): ResponseSpec {
+    fun getAcceptedGroupPayments(groupId: String, currency: String): ResponseSpec {
         return webClient.get()
-            .uri(URI("$INTERNAL/payments/accepted/groups/$groupId"))
+            .uri { it.path("$INTERNAL/payments/accepted/groups/$groupId").queryParam("currency", currency).build() }
             .headers { it.withAppAcceptType() }
             .exchange()
     }

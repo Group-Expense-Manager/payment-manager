@@ -45,8 +45,9 @@ class InternalPaymentController(
     @ResponseStatus(OK)
     fun getAcceptedGroupPayments(
         @PathVariable groupId: String,
+        @RequestParam currency: String,
     ): AcceptedGroupPaymentsResponse {
-        return paymentService.getAcceptedGroupPayments(groupId).toAcceptedGroupPaymentsResponse(groupId)
+        return paymentService.getAcceptedGroupPayments(groupId, currency).toAcceptedGroupPaymentsResponse(groupId)
     }
 
     @GetMapping("balance/groups/{groupId}/users/{userId}", produces = [APPLICATION_JSON_INTERNAL_VER_1])
