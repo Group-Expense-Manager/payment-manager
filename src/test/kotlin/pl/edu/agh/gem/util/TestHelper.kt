@@ -367,3 +367,9 @@ data class Pair<A, B>(
     val first: A,
     val second: B,
 )
+
+data class Triple<A, B, C>(
+    val first: A,
+    val second: B,
+    val third: C,
+)

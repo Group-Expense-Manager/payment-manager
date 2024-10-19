@@ -1,9 +1,12 @@
 package pl.edu.agh.gem.internal.service
 
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import pl.edu.agh.gem.internal.client.CurrencyManagerClient
+import pl.edu.agh.gem.internal.client.FinanceAdapterClient
 import pl.edu.agh.gem.internal.client.GroupManagerClient
 import pl.edu.agh.gem.internal.mapper.BalanceElementMapper
+import pl.edu.agh.gem.internal.model.currency.Currency
 import pl.edu.agh.gem.internal.model.group.GroupData
 import pl.edu.agh.gem.internal.model.payment.BalanceElement
 import pl.edu.agh.gem.internal.model.payment.FxData
@@ -40,6 +43,7 @@ import java.time.ZoneId
 class PaymentService(
     private val groupManagerClient: GroupManagerClient,
     private val currencyManagerClient: CurrencyManagerClient,
+    private val financeAdapterClient: FinanceAdapterClient,
     private val paymentRepository: PaymentRepository,
     private val archivedPaymentRepository: ArchivedPaymentRepository,
 ) {
@@ -106,6 +110,7 @@ class PaymentService(
             )
         }
 
+    @Transactional
     fun decide(paymentDecision: PaymentDecision): Payment {
         val payment = paymentRepository.findByPaymentIdAndGroupId(paymentDecision.paymentId, paymentDecision.groupId)
             ?: throw MissingPaymentException(paymentDecision.paymentId, paymentDecision.groupId)
@@ -115,7 +120,21 @@ class PaymentService(
             .takeIf { it.isNotEmpty() }
             ?.also { throw ValidatorsException(it) }
 
-        return paymentRepository.save(payment.addDecision(paymentDecision))
+        val updatedPayment = paymentRepository.save(payment.addDecision(paymentDecision))
+
+        val previousStatus = payment.status
+        val currentStatus = updatedPayment.status
+        if (previousStatus.changedToAccepted(currentStatus) || currentStatus.changedFromAccepted(previousStatus)) {
+            generateBalancesAndSettlements(updatedPayment)
+        }
+        return updatedPayment
+    }
+
+    private fun generateBalancesAndSettlements(payment: Payment) {
+        financeAdapterClient.generate(
+            groupId = payment.groupId,
+            currency = Currency(payment.fxData?.targetCurrency ?: payment.amount.currency),
+        )
     }
 
     private fun Payment.addDecision(paymentDecision: PaymentDecision): Payment {
@@ -133,6 +152,7 @@ class PaymentService(
         )
     }
 
+    @Transactional
     fun deletePayment(paymentId: String, groupId: String, userId: String) {
         val paymentToDelete = paymentRepository.findByPaymentIdAndGroupId(paymentId, groupId) ?: throw MissingPaymentException(paymentId, groupId)
 
@@ -148,8 +168,13 @@ class PaymentService(
 
         paymentRepository.delete(paymentToDelete)
         archivedPaymentRepository.add(paymentToDelete)
+
+        if (paymentToDelete.status == ACCEPTED) {
+            generateBalancesAndSettlements(paymentToDelete)
+        }
     }
 
+    @Transactional
     fun updatePayment(groupData: GroupData, update: PaymentUpdate): Payment {
         val originalPayment = paymentRepository.findByPaymentIdAndGroupId(update.id, update.groupId)
             ?: throw MissingPaymentException(update.id, update.groupId)
@@ -165,7 +190,7 @@ class PaymentService(
             .takeIf { it.isNotEmpty() }
             ?.also { throw ValidatorsException(it) }
 
-        return paymentRepository.save(
+        val updatedPayment = paymentRepository.save(
             originalPayment.copy(
                 title = update.title,
                 type = update.type,
@@ -178,6 +203,12 @@ class PaymentService(
                 attachmentId = update.attachmentId,
             ),
         )
+
+        if (originalPayment.status == ACCEPTED) {
+            generateBalancesAndSettlements(originalPayment)
+        }
+
+        return updatedPayment
     }
 
     private fun updateFxData(originalPayment: Payment, paymentUpdate: PaymentUpdate): FxData? {
