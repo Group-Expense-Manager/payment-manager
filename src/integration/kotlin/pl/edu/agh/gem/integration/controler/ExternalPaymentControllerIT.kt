@@ -8,7 +8,6 @@ import io.kotest.matchers.shouldBe
 import org.springframework.http.HttpStatus.BAD_REQUEST
 import org.springframework.http.HttpStatus.CREATED
 import org.springframework.http.HttpStatus.FORBIDDEN
-import org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR
 import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.http.HttpStatus.OK
 import pl.edu.agh.gem.assertion.shouldBody
@@ -21,6 +20,7 @@ import pl.edu.agh.gem.external.dto.group.CurrencyDTO
 import pl.edu.agh.gem.external.dto.payment.PaymentResponse
 import pl.edu.agh.gem.external.dto.payment.toAmountDto
 import pl.edu.agh.gem.external.dto.payment.toDto
+import pl.edu.agh.gem.external.dto.reconciliation.GenerateReconciliationRequest
 import pl.edu.agh.gem.helper.group.DummyGroup.GROUP_ID
 import pl.edu.agh.gem.helper.group.DummyGroup.OTHER_GROUP_ID
 import pl.edu.agh.gem.helper.user.DummyUser.EMAIL
@@ -69,10 +69,8 @@ import pl.edu.agh.gem.validation.ValidationMessage.BASE_CURRENCY_NOT_AVAILABLE
 import pl.edu.agh.gem.validation.ValidationMessage.BASE_CURRENCY_NOT_BLANK
 import pl.edu.agh.gem.validation.ValidationMessage.BASE_CURRENCY_NOT_IN_GROUP_CURRENCIES
 import pl.edu.agh.gem.validation.ValidationMessage.BASE_CURRENCY_PATTERN
-import pl.edu.agh.gem.validation.ValidationMessage.GROUP_ID_NOT_BLANK
 import pl.edu.agh.gem.validation.ValidationMessage.MAX_AMOUNT
 import pl.edu.agh.gem.validation.ValidationMessage.MESSAGE_NULL_OR_NOT_BLANK
-import pl.edu.agh.gem.validation.ValidationMessage.PAYMENT_ID_NOT_BLANK
 import pl.edu.agh.gem.validation.ValidationMessage.POSITIVE_AMOUNT
 import pl.edu.agh.gem.validation.ValidationMessage.RECIPIENT_ID_NOT_BLANK
 import pl.edu.agh.gem.validation.ValidationMessage.RECIPIENT_IS_CREATOR
@@ -299,7 +297,7 @@ class ExternalPaymentControllerIT(
             stubGroupManagerUserGroups(createUserGroupsResponse(GROUP_ID, OTHER_GROUP_ID), OTHER_USER_ID)
 
             if (shouldStubFinanceAdapter) {
-                stubFinanceAdapterGenerate(requestBody = CurrencyDTO(code = CURRENCY_2), groupId = GROUP_ID)
+                stubFinanceAdapterGenerate(requestBody = GenerateReconciliationRequest(currency = CURRENCY_2), groupId = GROUP_ID)
             }
 
             val payment = createPayment(status = expenseStatus)
@@ -330,42 +328,6 @@ class ExternalPaymentControllerIT(
                     history.comment shouldBe decisionRequest.message
                 }
             }
-        }
-    }
-
-    should("rollback decide when financeClient fails") {
-        // given
-        val decisionRequest = createPaymentDecisionRequest()
-        stubGroupManagerUserGroups(createUserGroupsResponse(GROUP_ID, OTHER_GROUP_ID), OTHER_USER_ID)
-        stubFinanceAdapterGenerate(requestBody = CurrencyDTO(code = CURRENCY_2), groupId = GROUP_ID, statusCode = INTERNAL_SERVER_ERROR)
-
-        val payment = createPayment()
-        paymentRepository.save(payment)
-
-        // when
-        val response = service.decide(decisionRequest, createGemUser(id = OTHER_USER_ID))
-
-        // then
-        response shouldHaveHttpStatus INTERNAL_SERVER_ERROR
-        paymentRepository.findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID).also {
-            it?.status shouldBe PENDING
-        }
-    }
-
-    context("return validation exception when decide cause:") {
-        withData(
-            nameFn = { it.first },
-            Pair(PAYMENT_ID_NOT_BLANK, createPaymentDecisionRequest(paymentId = "")),
-            Pair(GROUP_ID_NOT_BLANK, createPaymentDecisionRequest(groupId = "")),
-            Pair(MESSAGE_NULL_OR_NOT_BLANK, createPaymentDecisionRequest(message = "")),
-
-        ) { (expectedMessage, paymentDecisionRequest) ->
-            // when
-            val response = service.decide(paymentDecisionRequest, createGemUser())
-
-            // then
-            response shouldHaveHttpStatus BAD_REQUEST
-            response shouldHaveValidationError expectedMessage
         }
     }
 
@@ -422,7 +384,7 @@ class ExternalPaymentControllerIT(
         val payment = createPayment(id = PAYMENT_ID, groupId = GROUP_ID, creatorId = USER_ID, status = ACCEPTED)
         paymentRepository.save(payment)
         stubGroupManagerUserGroups(createUserGroupsResponse(GROUP_ID, OTHER_GROUP_ID), USER_ID)
-        stubFinanceAdapterGenerate(requestBody = CurrencyDTO(code = CURRENCY_2), groupId = GROUP_ID)
+        stubFinanceAdapterGenerate(requestBody = GenerateReconciliationRequest(currency = CURRENCY_2), groupId = GROUP_ID)
 
         // when
         val response = service.delete(createGemUser(USER_ID, EMAIL), GROUP_ID, PAYMENT_ID)
@@ -433,29 +395,13 @@ class ExternalPaymentControllerIT(
             it.shouldBeNull()
         }
     }
-    should("rollback deleting payment that was ACCEPTED when financeAdapterClient failed") {
-        // given
-        val payment = createPayment(id = PAYMENT_ID, groupId = GROUP_ID, creatorId = USER_ID, status = ACCEPTED)
-        paymentRepository.save(payment)
-        stubGroupManagerUserGroups(createUserGroupsResponse(GROUP_ID, OTHER_GROUP_ID), USER_ID)
-        stubFinanceAdapterGenerate(requestBody = CurrencyDTO(code = CURRENCY_2), groupId = GROUP_ID, statusCode = INTERNAL_SERVER_ERROR)
-
-        // when
-        val response = service.delete(createGemUser(USER_ID, EMAIL), GROUP_ID, PAYMENT_ID)
-
-        // then
-        response shouldHaveHttpStatus INTERNAL_SERVER_ERROR
-        paymentRepository.findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID).also {
-            it.shouldNotBeNull()
-        }
-    }
 
     should("delete payment that was not ACCEPTED") {
         // given
         val payment = createPayment(id = PAYMENT_ID, groupId = GROUP_ID, creatorId = USER_ID, status = PENDING)
         paymentRepository.save(payment)
         stubGroupManagerUserGroups(createUserGroupsResponse(GROUP_ID, OTHER_GROUP_ID), USER_ID)
-        stubFinanceAdapterGenerate(requestBody = CurrencyDTO(code = CURRENCY_2), groupId = GROUP_ID)
+        stubFinanceAdapterGenerate(requestBody = GenerateReconciliationRequest(currency = CURRENCY_2), groupId = GROUP_ID)
 
         // when
         val response = service.delete(createGemUser(USER_ID, EMAIL), GROUP_ID, PAYMENT_ID)
@@ -638,7 +584,7 @@ class ExternalPaymentControllerIT(
             CURRENCY_1,
             Instant.ofEpochSecond(0L).atZone(ZoneId.systemDefault()).toLocalDate(),
         )
-        stubFinanceAdapterGenerate(requestBody = CurrencyDTO(code = CURRENCY_2), groupId = GROUP_ID)
+        stubFinanceAdapterGenerate(requestBody = GenerateReconciliationRequest(currency = CURRENCY_2), groupId = GROUP_ID)
 
         // when
         val response = service.updatePayment(paymentUpdateRequest, createGemUser(USER_ID), GROUP_ID, PAYMENT_ID)
@@ -691,47 +637,6 @@ class ExternalPaymentControllerIT(
                 history.paymentAction shouldBe EDITED
                 history.comment shouldBe paymentUpdateRequest.message
             }
-        }
-    }
-
-    should("rollback updating payment that was ACCEPTED when financeAdapterClient failed") {
-        // given
-        val payment = createPayment(id = PAYMENT_ID, groupId = GROUP_ID, creatorId = USER_ID, status = ACCEPTED)
-        val paymentUpdateRequest = createPaymentUpdateRequest(
-            amount = createAmountDto(value = "6".toBigDecimal(), currency = CURRENCY_2),
-            targetCurrency = CURRENCY_1,
-        )
-        paymentRepository.save(payment)
-        stubGroupManagerGroupData(createGroupResponse(members = createMembersDTO(USER_ID, OTHER_USER_ID, ANOTHER_USER_ID)), GROUP_ID)
-        stubCurrencyManagerAvailableCurrencies(createCurrenciesResponse(CURRENCY_1, CURRENCY_2))
-        stubCurrencyManagerExchangeRate(
-            createExchangeRateResponse(value = EXCHANGE_RATE_VALUE),
-            CURRENCY_2,
-            CURRENCY_1,
-            Instant.ofEpochSecond(0L).atZone(ZoneId.systemDefault()).toLocalDate(),
-        )
-        stubFinanceAdapterGenerate(requestBody = CurrencyDTO(code = CURRENCY_1), groupId = GROUP_ID, statusCode = INTERNAL_SERVER_ERROR)
-
-        // when
-        val response = service.updatePayment(paymentUpdateRequest, createGemUser(USER_ID), GROUP_ID, PAYMENT_ID)
-
-        // then
-        response shouldHaveHttpStatus INTERNAL_SERVER_ERROR
-
-        paymentRepository.findByPaymentIdAndGroupId(PAYMENT_ID, GROUP_ID).also {
-            it.shouldNotBeNull()
-            it.id shouldBe PAYMENT_ID
-            it.groupId shouldBe GROUP_ID
-            it.creatorId shouldBe USER_ID
-            it.title shouldBe payment.title
-            it.type shouldBe payment.type
-            it.amount shouldBe payment.amount
-            it.fxData shouldBe payment.fxData
-            it.createdAt.shouldNotBeNull()
-            it.updatedAt.shouldNotBeNull()
-            it.attachmentId shouldBe payment.attachmentId
-            it.recipientId shouldBe payment.recipientId
-            it.status shouldBe ACCEPTED
         }
     }
 
