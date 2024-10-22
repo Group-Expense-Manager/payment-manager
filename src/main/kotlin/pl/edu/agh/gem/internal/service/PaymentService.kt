@@ -1,7 +1,6 @@
 package pl.edu.agh.gem.internal.service
 
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 import pl.edu.agh.gem.internal.client.CurrencyManagerClient
 import pl.edu.agh.gem.internal.client.FinanceAdapterClient
 import pl.edu.agh.gem.internal.client.GroupManagerClient
@@ -19,8 +18,6 @@ import pl.edu.agh.gem.internal.model.payment.PaymentStatus.ACCEPTED
 import pl.edu.agh.gem.internal.model.payment.PaymentStatus.PENDING
 import pl.edu.agh.gem.internal.model.payment.PaymentUpdate
 import pl.edu.agh.gem.internal.model.payment.filter.FilterOptions
-import pl.edu.agh.gem.internal.model.payment.filter.SortOrder.ASCENDING
-import pl.edu.agh.gem.internal.model.payment.filter.SortedBy.DATE
 import pl.edu.agh.gem.internal.persistence.ArchivedPaymentRepository
 import pl.edu.agh.gem.internal.persistence.PaymentRepository
 import pl.edu.agh.gem.validation.CreatorData
@@ -54,12 +51,6 @@ class PaymentService(
     val creatorValidator = CreatorValidator()
 
     val balanceElementMapper = BalanceElementMapper()
-
-    val acceptedPaymentsFilterOptions = FilterOptions(
-        status = ACCEPTED,
-        sortedBy = DATE,
-        sortOrder = ASCENDING,
-    )
 
     fun getGroup(groupId: String): GroupData {
         return groupManagerClient.getGroup(groupId)
@@ -110,7 +101,6 @@ class PaymentService(
             )
         }
 
-    @Transactional
     fun decide(paymentDecision: PaymentDecision): Payment {
         val payment = paymentRepository.findByPaymentIdAndGroupId(paymentDecision.paymentId, paymentDecision.groupId)
             ?: throw MissingPaymentException(paymentDecision.paymentId, paymentDecision.groupId)
@@ -152,7 +142,6 @@ class PaymentService(
         )
     }
 
-    @Transactional
     fun deletePayment(paymentId: String, groupId: String, userId: String) {
         val paymentToDelete = paymentRepository.findByPaymentIdAndGroupId(paymentId, groupId) ?: throw MissingPaymentException(paymentId, groupId)
 
@@ -174,7 +163,6 @@ class PaymentService(
         }
     }
 
-    @Transactional
     fun updatePayment(groupData: GroupData, update: PaymentUpdate): Payment {
         val originalPayment = paymentRepository.findByPaymentIdAndGroupId(update.id, update.groupId)
             ?: throw MissingPaymentException(update.id, update.groupId)
