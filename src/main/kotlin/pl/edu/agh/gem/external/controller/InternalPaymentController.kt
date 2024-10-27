@@ -34,10 +34,11 @@ class InternalPaymentController(
         @RequestParam title: String?,
         @RequestParam status: PaymentStatus?,
         @RequestParam creatorId: String?,
-        @RequestParam sortedBy: SortedBy,
-        @RequestParam sortOrder: SortOrder,
+        @RequestParam sortedBy: SortedBy?,
+        @RequestParam sortOrder: SortOrder?,
     ): GroupActivitiesResponse {
-        val filterOptions = FilterOptions(title, status, creatorId, sortedBy, sortOrder)
+        val filterOptions = if (sortedBy != null && sortOrder != null) FilterOptions(title, status, creatorId, sortedBy, sortOrder) else null
+
         return paymentService.getGroupActivities(groupId, filterOptions).toGroupActivitiesResponse(groupId)
     }
 

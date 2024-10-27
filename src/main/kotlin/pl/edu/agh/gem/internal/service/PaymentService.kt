@@ -239,7 +239,7 @@ class PaymentService(
         ),
     )
 
-    fun getGroupActivities(groupId: String, filterOptions: FilterOptions): List<Payment> {
+    fun getGroupActivities(groupId: String, filterOptions: FilterOptions?): List<Payment> {
         return paymentRepository.findByGroupId(groupId, filterOptions)
     }
 
