@@ -335,12 +335,14 @@ fun createFilterOptions(
     title: String? = null,
     status: PaymentStatus? = null,
     creatorId: String? = null,
+    currency: String? = null,
     sortedBy: SortedBy = DATE,
     sortOrder: SortOrder = ASCENDING,
 ) = FilterOptions(
     title = title,
     status = status,
     creatorId = creatorId,
+    currency = currency,
     sortedBy = sortedBy,
     sortOrder = sortOrder,
 )

@@ -15,7 +15,11 @@ import pl.edu.agh.gem.internal.model.payment.filter.SortOrder.DESCENDING
 import pl.edu.agh.gem.internal.model.payment.filter.SortedBy.DATE
 import pl.edu.agh.gem.internal.model.payment.filter.SortedBy.TITLE
 import pl.edu.agh.gem.internal.persistence.PaymentRepository
+import pl.edu.agh.gem.util.DummyData.CURRENCY_1
+import pl.edu.agh.gem.util.DummyData.CURRENCY_2
+import pl.edu.agh.gem.util.createAmount
 import pl.edu.agh.gem.util.createFilterOptions
+import pl.edu.agh.gem.util.createFxData
 import pl.edu.agh.gem.util.createPayment
 import java.time.Instant.ofEpochMilli
 
@@ -112,6 +116,34 @@ class MongoPaymentRepositoryIT(
         listOf(payment1, payment2, payment3).forEach { paymentRepository.save(it) }
 
         val filterOptions = createFilterOptions(creatorId = "1")
+
+        // when
+        val payments = paymentRepository.findByGroupId(GROUP_ID, filterOptions)
+
+        // then
+        payments.map { it.id } shouldContainExactly listOf(payment1.id, payment3.id)
+    }
+
+    should("find payment with given groupId and currency") {
+        // given
+        val payment1 = createPayment(id = "1", groupId = GROUP_ID, amount = createAmount(currency = CURRENCY_1), fxData = null)
+        val payment2 = createPayment(id = "2", groupId = GROUP_ID, amount = createAmount(currency = CURRENCY_2), fxData = null)
+        val payment3 = createPayment(
+            id = "3",
+            groupId = GROUP_ID,
+            amount = createAmount(currency = CURRENCY_2),
+            fxData = createFxData(targetCurrency = CURRENCY_1),
+        )
+        val payment4 = createPayment(
+            id = "4",
+            groupId = GROUP_ID,
+            amount = createAmount(currency = CURRENCY_1),
+            fxData = createFxData(targetCurrency = CURRENCY_2),
+        )
+
+        listOf(payment1, payment2, payment3, payment4).forEach { paymentRepository.save(it) }
+
+        val filterOptions = createFilterOptions(currency = CURRENCY_1)
 
         // when
         val payments = paymentRepository.findByGroupId(GROUP_ID, filterOptions)
