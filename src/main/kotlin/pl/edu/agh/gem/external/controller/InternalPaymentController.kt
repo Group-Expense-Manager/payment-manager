@@ -34,12 +34,13 @@ class InternalPaymentController(
         @RequestParam title: String?,
         @RequestParam status: PaymentStatus?,
         @RequestParam creatorId: String?,
+        @RequestParam currency: String?,
         @RequestParam sortedBy: SortedBy?,
         @RequestParam sortOrder: SortOrder?,
     ): GroupActivitiesResponse {
-        val filterOptions = if (sortedBy != null && sortOrder != null) FilterOptions(title, status, creatorId, sortedBy, sortOrder) else null
+        val filter = if (sortedBy != null && sortOrder != null) FilterOptions(title, status, creatorId, currency, sortedBy, sortOrder) else null
 
-        return paymentService.getGroupActivities(groupId, filterOptions).toGroupActivitiesResponse(groupId)
+        return paymentService.getGroupActivities(groupId, filter).toGroupActivitiesResponse(groupId)
     }
 
     @GetMapping("accepted/groups/{groupId}", produces = [APPLICATION_JSON_INTERNAL_VER_1])

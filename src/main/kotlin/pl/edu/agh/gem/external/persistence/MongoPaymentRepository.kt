@@ -2,6 +2,7 @@ package pl.edu.agh.gem.external.persistence
 
 import org.springframework.data.domain.Sort
 import org.springframework.data.mongodb.core.MongoTemplate
+import org.springframework.data.mongodb.core.query.Criteria
 import org.springframework.data.mongodb.core.query.Query
 import org.springframework.data.mongodb.core.query.Query.query
 import org.springframework.data.mongodb.core.query.isEqualTo
@@ -46,6 +47,19 @@ class MongoPaymentRepository(
 
             it.creatorId?.also { creatorId ->
                 query.addCriteria(where(PaymentEntity::creatorId).isEqualTo(creatorId))
+            }
+
+            it.currency?.also { currency ->
+                query.addCriteria(
+                    Criteria().orOperator(
+                        Criteria.where("fxData.targetCurrency").`is`(currency),
+                        Criteria().andOperator(
+                            Criteria.where("amount.currency").`is`(currency),
+                            Criteria.where("fxData").isNull(),
+                        ),
+
+                    ),
+                )
             }
 
             val sortedByField = when (it.sortedBy) {
