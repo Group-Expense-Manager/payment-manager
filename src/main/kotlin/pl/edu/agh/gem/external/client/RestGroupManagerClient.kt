@@ -1,7 +1,7 @@
 package pl.edu.agh.gem.external.client
 
 import io.github.resilience4j.retry.annotation.Retry
-import mu.KotlinLogging
+import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders

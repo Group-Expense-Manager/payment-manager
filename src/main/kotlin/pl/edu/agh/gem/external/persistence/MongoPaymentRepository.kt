@@ -15,8 +15,10 @@ import pl.edu.agh.gem.internal.model.payment.filter.SortOrder.DESCENDING
 import pl.edu.agh.gem.internal.model.payment.filter.SortedBy.DATE
 import pl.edu.agh.gem.internal.model.payment.filter.SortedBy.TITLE
 import pl.edu.agh.gem.internal.persistence.PaymentRepository
+import pl.edu.agh.gem.metrics.MeteredRepository
 
 @Repository
+@MeteredRepository
 class MongoPaymentRepository(
     private val mongo: MongoTemplate,
 
