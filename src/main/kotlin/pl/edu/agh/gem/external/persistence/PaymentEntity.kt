@@ -31,7 +31,27 @@ data class PaymentEntity(
     val status: PaymentStatus,
     val history: List<PaymentHistoryEntry>,
 ) {
-    fun toDomain() = Payment(
+    fun toDomain() =
+        Payment(
+            id = id,
+            groupId = groupId,
+            creatorId = creatorId,
+            recipientId = recipientId,
+            title = title,
+            type = type,
+            amount = amount,
+            fxData = fxData,
+            date = date,
+            createdAt = createdAt,
+            updatedAt = updatedAt,
+            attachmentId = attachmentId,
+            status = status,
+            history = history,
+        )
+}
+
+fun Payment.toEntity() =
+    PaymentEntity(
         id = id,
         groupId = groupId,
         creatorId = creatorId,
@@ -47,21 +67,3 @@ data class PaymentEntity(
         status = status,
         history = history,
     )
-}
-
-fun Payment.toEntity() = PaymentEntity(
-    id = id,
-    groupId = groupId,
-    creatorId = creatorId,
-    recipientId = recipientId,
-    title = title,
-    type = type,
-    amount = amount,
-    fxData = fxData,
-    date = date,
-    createdAt = createdAt,
-    updatedAt = updatedAt,
-    attachmentId = attachmentId,
-    status = status,
-    history = history,
-)

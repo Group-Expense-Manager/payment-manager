@@ -29,4 +29,4 @@ class PaymentUpdateRequestTest : ShouldSpec({
             it.message shouldBe paymentUpdateRequest.message
         }
     }
-},)
+})

@@ -31,16 +31,12 @@ import pl.edu.agh.gem.validator.ValidatorsException
 @Order(LOWEST_PRECEDENCE)
 class ApiExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException::class)
-    fun handleMethodArgumentNotValidException(
-        exception: MethodArgumentNotValidException,
-    ): ResponseEntity<SimpleErrorsHolder> {
+    fun handleMethodArgumentNotValidException(exception: MethodArgumentNotValidException): ResponseEntity<SimpleErrorsHolder> {
         return ResponseEntity(handleNotValidException(exception), BAD_REQUEST)
     }
 
     @ExceptionHandler(UserWithoutGroupAccessException::class)
-    fun handleUserWithoutGroupAccessException(
-        exception: UserWithoutGroupAccessException,
-    ): ResponseEntity<SimpleErrorsHolder> {
+    fun handleUserWithoutGroupAccessException(exception: UserWithoutGroupAccessException): ResponseEntity<SimpleErrorsHolder> {
         return ResponseEntity(handleError(exception), FORBIDDEN)
     }
 
@@ -50,13 +46,14 @@ class ApiExceptionHandler {
     }
 
     private fun handleValidatorException(exception: ValidatorsException): SimpleErrorsHolder {
-        val errors = exception.failedValidations
-            .map { error ->
-                SimpleError()
-                    .withCode("VALIDATOR_ERROR")
-                    .withDetails(error)
-                    .withMessage(error)
-            }
+        val errors =
+            exception.failedValidations
+                .map { error ->
+                    SimpleError()
+                        .withCode("VALIDATOR_ERROR")
+                        .withDetails(error)
+                        .withMessage(error)
+                }
         return SimpleErrorsHolder(errors)
     }
 
@@ -66,9 +63,7 @@ class ApiExceptionHandler {
     }
 
     @ExceptionHandler(RetryableCurrencyManagerClientException::class)
-    fun handleRetryableCurrencyManagerClientException(
-        exception: RetryableCurrencyManagerClientException,
-    ): ResponseEntity<SimpleErrorsHolder> {
+    fun handleRetryableCurrencyManagerClientException(exception: RetryableCurrencyManagerClientException): ResponseEntity<SimpleErrorsHolder> {
         return ResponseEntity(handleError(exception), INTERNAL_SERVER_ERROR)
     }
 
@@ -78,9 +73,7 @@ class ApiExceptionHandler {
     }
 
     @ExceptionHandler(RetryableGroupManagerClientException::class)
-    fun handleRetryableGroupManagerClientException(
-        exception: RetryableGroupManagerClientException,
-    ): ResponseEntity<SimpleErrorsHolder> {
+    fun handleRetryableGroupManagerClientException(exception: RetryableGroupManagerClientException): ResponseEntity<SimpleErrorsHolder> {
         return ResponseEntity(handleError(exception), INTERNAL_SERVER_ERROR)
     }
 
@@ -90,9 +83,7 @@ class ApiExceptionHandler {
     }
 
     @ExceptionHandler(RetryableFinanceAdapterClientException::class)
-    fun handleRetryableFinanceAdapterClientException(
-        exception: RetryableFinanceAdapterClientException,
-    ): ResponseEntity<SimpleErrorsHolder> {
+    fun handleRetryableFinanceAdapterClientException(exception: RetryableFinanceAdapterClientException): ResponseEntity<SimpleErrorsHolder> {
         return ResponseEntity(handleError(exception), INTERNAL_SERVER_ERROR)
     }
 

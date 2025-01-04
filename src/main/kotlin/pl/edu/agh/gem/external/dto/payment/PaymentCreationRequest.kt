@@ -46,7 +46,10 @@ data class PaymentCreationRequest(
     @field:NullOrNotBlank(message = ATTACHMENT_ID_NULL_OR_NOT_BLANK)
     val attachmentId: String?,
 ) {
-    fun toDomain(userId: String, groupId: String) = PaymentCreation(
+    fun toDomain(
+        userId: String,
+        groupId: String,
+    ) = PaymentCreation(
         groupId = groupId,
         creatorId = userId,
         recipientId = recipientId,
@@ -69,8 +72,9 @@ data class AmountDto(
     @field:Pattern(regexp = "[A-Z]{3}", message = BASE_CURRENCY_PATTERN)
     val currency: String,
 ) {
-    fun toDomain() = Amount(
-        value = value,
-        currency = currency,
-    )
+    fun toDomain() =
+        Amount(
+            value = value,
+            currency = currency,
+        )
 }

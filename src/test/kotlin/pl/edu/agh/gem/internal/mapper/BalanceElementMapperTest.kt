@@ -24,14 +24,16 @@ class BalanceElementMapperTest : ShouldSpec({
                 createPayment(
                     creatorId = USER_ID,
                     recipientId = OTHER_USER_ID,
-                    amount = createAmount(
-                        value = 50.toBigDecimal(),
-                        currency = CURRENCY_1,
-                    ),
-                    fxData = createFxData(
-                        targetCurrency = CURRENCY_2,
-                        exchangeRate = "1.5".toBigDecimal(),
-                    ),
+                    amount =
+                        createAmount(
+                            value = 50.toBigDecimal(),
+                            currency = CURRENCY_1,
+                        ),
+                    fxData =
+                        createFxData(
+                            targetCurrency = CURRENCY_2,
+                            exchangeRate = "1.5".toBigDecimal(),
+                        ),
                 ),
                 createBalanceElement(
                     value = 50.toBigDecimal(),
@@ -43,10 +45,11 @@ class BalanceElementMapperTest : ShouldSpec({
                 createPayment(
                     creatorId = OTHER_USER_ID,
                     recipientId = USER_ID,
-                    amount = createAmount(
-                        value = 50.toBigDecimal(),
-                        currency = CURRENCY_1,
-                    ),
+                    amount =
+                        createAmount(
+                            value = 50.toBigDecimal(),
+                            currency = CURRENCY_1,
+                        ),
                     fxData = null,
                 ),
                 createBalanceElement(
@@ -70,4 +73,4 @@ class BalanceElementMapperTest : ShouldSpec({
             actualBalanceElement shouldBe expectedBalanceElement
         }
     }
-},)
+})

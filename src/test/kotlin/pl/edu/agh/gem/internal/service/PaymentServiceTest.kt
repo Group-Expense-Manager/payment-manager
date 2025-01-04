@@ -70,13 +70,14 @@ class PaymentServiceTest : ShouldSpec({
     val paymentRepository = mock<PaymentRepository> {}
     val archivedPaymentRepository = mock<ArchivedPaymentRepository> {}
 
-    val paymentService = PaymentService(
-        groupManagerClient,
-        currencyManagerClient,
-        financeAdapterClient,
-        paymentRepository,
-        archivedPaymentRepository,
-    )
+    val paymentService =
+        PaymentService(
+            groupManagerClient,
+            currencyManagerClient,
+            financeAdapterClient,
+            paymentRepository,
+            archivedPaymentRepository,
+        )
 
     should("create payment") {
         // given
@@ -150,7 +151,6 @@ class PaymentServiceTest : ShouldSpec({
             ),
             Quadruple(TARGET_CURRENCY_NOT_IN_GROUP_CURRENCIES, createPaymentCreation(), arrayOf(CURRENCY_1), arrayOf(CURRENCY_1, CURRENCY_2)),
             Quadruple(BASE_CURRENCY_NOT_AVAILABLE, createPaymentCreation(), arrayOf(CURRENCY_1, CURRENCY_2), arrayOf(CURRENCY_2)),
-
         ) { (expectedMessage, paymentCreation, groupCurrencies, availableCurrencies) ->
             // given
             val group = createGroup(currencies = createCurrencies(*groupCurrencies))
@@ -196,7 +196,6 @@ class PaymentServiceTest : ShouldSpec({
             Triple(REJECTED, ACCEPT, 1),
             Triple(ACCEPTED, ACCEPT, 0),
             Triple(PENDING, REJECT, 0),
-
         ) { (status, decision, timesInvoked) ->
             // given
             val payment = createPayment(status = status)
@@ -442,7 +441,6 @@ class PaymentServiceTest : ShouldSpec({
     context("throw ValidatorsException when updating exception cause:") {
         withData(
             nameFn = { it.first },
-
             Quadruple(
                 BASE_CURRENCY_NOT_IN_GROUP_CURRENCIES,
                 createPaymentUpdate(targetCurrency = null),
@@ -509,41 +507,43 @@ class PaymentServiceTest : ShouldSpec({
 
     should("get accepted payments") {
         // given
-        val acceptedPayment1 = createPayment(
-            status = ACCEPTED,
-            amount = createAmount(currency = CURRENCY_1),
-            fxData = createFxData(targetCurrency = CURRENCY_2),
-        )
-        val acceptedPayment2 = createPayment(
-            status = ACCEPTED,
-            amount = createAmount(currency = CURRENCY_2),
-            fxData = null,
-        )
-        val payments = listOf(
-            acceptedPayment1,
-            acceptedPayment2,
-
+        val acceptedPayment1 =
             createPayment(
                 status = ACCEPTED,
-                amount = createAmount(currency = CURRENCY_2),
-                fxData = createFxData(targetCurrency = CURRENCY_1),
-            ),
-            createPayment(
-                status = ACCEPTED,
-                amount = createAmount(currency = CURRENCY_1),
-                fxData = null,
-            ),
-            createPayment(
-                status = PENDING,
                 amount = createAmount(currency = CURRENCY_1),
                 fxData = createFxData(targetCurrency = CURRENCY_2),
-            ),
+            )
+        val acceptedPayment2 =
             createPayment(
-                status = PENDING,
+                status = ACCEPTED,
                 amount = createAmount(currency = CURRENCY_2),
                 fxData = null,
-            ),
-        )
+            )
+        val payments =
+            listOf(
+                acceptedPayment1,
+                acceptedPayment2,
+                createPayment(
+                    status = ACCEPTED,
+                    amount = createAmount(currency = CURRENCY_2),
+                    fxData = createFxData(targetCurrency = CURRENCY_1),
+                ),
+                createPayment(
+                    status = ACCEPTED,
+                    amount = createAmount(currency = CURRENCY_1),
+                    fxData = null,
+                ),
+                createPayment(
+                    status = PENDING,
+                    amount = createAmount(currency = CURRENCY_1),
+                    fxData = createFxData(targetCurrency = CURRENCY_2),
+                ),
+                createPayment(
+                    status = PENDING,
+                    amount = createAmount(currency = CURRENCY_2),
+                    fxData = null,
+                ),
+            )
         whenever(paymentRepository.findByGroupId(GROUP_ID)).thenReturn(payments)
         // when
         val result = paymentService.getAcceptedGroupPayments(GROUP_ID, CURRENCY_2)
@@ -559,37 +559,40 @@ class PaymentServiceTest : ShouldSpec({
 
     should("get user balance") {
         // given
-        val payments = listOf(
-            createPayment(
-                status = ACCEPTED,
-                creatorId = USER_ID,
-                recipientId = OTHER_USER_ID,
-                amount = createAmount(
-                    value = 50.toBigDecimal(),
-                    currency = CURRENCY_1,
+        val payments =
+            listOf(
+                createPayment(
+                    status = ACCEPTED,
+                    creatorId = USER_ID,
+                    recipientId = OTHER_USER_ID,
+                    amount =
+                        createAmount(
+                            value = 50.toBigDecimal(),
+                            currency = CURRENCY_1,
+                        ),
+                    fxData =
+                        createFxData(
+                            targetCurrency = CURRENCY_2,
+                            exchangeRate = "1.5".toBigDecimal(),
+                        ),
                 ),
-                fxData = createFxData(
-                    targetCurrency = CURRENCY_2,
-                    exchangeRate = "1.5".toBigDecimal(),
+                createPayment(
+                    status = ACCEPTED,
+                    creatorId = OTHER_USER_ID,
+                    recipientId = USER_ID,
+                    amount =
+                        createAmount(
+                            value = 50.toBigDecimal(),
+                            currency = CURRENCY_1,
+                        ),
+                    fxData = null,
                 ),
-            ),
-            createPayment(
-                status = ACCEPTED,
-                creatorId = OTHER_USER_ID,
-                recipientId = USER_ID,
-                amount = createAmount(
-                    value = 50.toBigDecimal(),
-                    currency = CURRENCY_1,
+                createPayment(
+                    status = ACCEPTED,
+                    creatorId = OTHER_USER_ID,
+                    recipientId = ANOTHER_USER_ID,
                 ),
-                fxData = null,
-            ),
-            createPayment(
-                status = ACCEPTED,
-                creatorId = OTHER_USER_ID,
-                recipientId = ANOTHER_USER_ID,
-            ),
-
-        )
+            )
         whenever(paymentRepository.findByGroupId(GROUP_ID)).thenReturn(payments)
 
         // when
@@ -611,7 +614,7 @@ class PaymentServiceTest : ShouldSpec({
         }
         verify(paymentRepository, times(1)).findByGroupId(GROUP_ID)
     }
-},)
+})
 
 data class Quadruple<A, B, C, D>(
     val first: A,

@@ -31,4 +31,4 @@ class PaymentResponseTest : ShouldSpec({
             it.history shouldContainExactly payment.history.map { entity -> entity.toDto() }
         }
     }
-},)
+})

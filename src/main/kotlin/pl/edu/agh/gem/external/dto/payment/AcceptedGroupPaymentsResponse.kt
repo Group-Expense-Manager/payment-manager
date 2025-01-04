@@ -24,22 +24,24 @@ data class FxDataDto(
     val exchangeRate: BigDecimal,
 )
 
-fun Payment.toAcceptedGroupPaymentDto() = AcceptedGroupPaymentDto(
-    creatorId = creatorId,
-    recipientId = recipientId,
-    title = title,
-    amount = amount.toAmountDto(),
-    fxData = fxData?.toDto(),
-    date = date,
-)
+fun Payment.toAcceptedGroupPaymentDto() =
+    AcceptedGroupPaymentDto(
+        creatorId = creatorId,
+        recipientId = recipientId,
+        title = title,
+        amount = amount.toAmountDto(),
+        fxData = fxData?.toDto(),
+        date = date,
+    )
 
-fun FxData.toDto() = FxDataDto(
-    targetCurrency = targetCurrency,
-    exchangeRate = exchangeRate,
+fun FxData.toDto() =
+    FxDataDto(
+        targetCurrency = targetCurrency,
+        exchangeRate = exchangeRate,
+    )
 
-)
-
-fun List<Payment>.toAcceptedGroupPaymentsResponse(groupId: String) = AcceptedGroupPaymentsResponse(
-    groupId = groupId,
-    payments = map { it.toAcceptedGroupPaymentDto() },
-)
+fun List<Payment>.toAcceptedGroupPaymentsResponse(groupId: String) =
+    AcceptedGroupPaymentsResponse(
+        groupId = groupId,
+        payments = map { it.toAcceptedGroupPaymentDto() },
+    )

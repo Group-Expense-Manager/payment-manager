@@ -1,7 +1,7 @@
 package pl.edu.agh.gem.external.client
 
-import io.github.resilience4j.retry.annotation.Retry
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.github.resilience4j.retry.annotation.Retry
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
@@ -16,7 +16,6 @@ import pl.edu.agh.gem.external.dto.reconciliation.GenerateReconciliationRequest
 import pl.edu.agh.gem.headers.HeadersUtils.withAppContentType
 import pl.edu.agh.gem.internal.client.FinanceAdapterClient
 import pl.edu.agh.gem.internal.client.FinanceAdapterClientException
-import pl.edu.agh.gem.internal.client.GroupManagerClientException
 import pl.edu.agh.gem.internal.client.RetryableFinanceAdapterClientException
 import pl.edu.agh.gem.internal.model.currency.Currency
 import pl.edu.agh.gem.paths.Paths.INTERNAL
@@ -26,9 +25,11 @@ class RestFinanceAdapterClient(
     @Qualifier("FinanceAdapterRestTemplate") val restTemplate: RestTemplate,
     private val financeAdapterProperties: FinanceAdapterProperties,
 ) : FinanceAdapterClient {
-
     @Retry(name = "financeAdapterClient")
-    override fun generate(groupId: String, currency: Currency) {
+    override fun generate(
+        groupId: String,
+        currency: Currency,
+    ) {
         try {
             restTemplate.exchange(
                 resolveGenerateAddress(groupId),
@@ -38,7 +39,7 @@ class RestFinanceAdapterClient(
             )
         } catch (ex: HttpClientErrorException) {
             logger.warn(ex) { "Client side exception while trying to generate balance & settlement for group: $groupId and currency: $currency" }
-            throw GroupManagerClientException(ex.message)
+            throw FinanceAdapterClientException(ex.message)
         } catch (ex: HttpServerErrorException) {
             logger.warn(ex) { "Server side exception while trying to generate balance & settlement for group: $groupId and currency: $currency" }
             throw RetryableFinanceAdapterClientException(ex.message)
@@ -48,8 +49,7 @@ class RestFinanceAdapterClient(
         }
     }
 
-    private fun resolveGenerateAddress(groupId: String) =
-        "${financeAdapterProperties.url}$INTERNAL/generate/groups/$groupId"
+    private fun resolveGenerateAddress(groupId: String) = "${financeAdapterProperties.url}$INTERNAL/generate/groups/$groupId"
 
     companion object {
         private val logger = KotlinLogging.logger {}

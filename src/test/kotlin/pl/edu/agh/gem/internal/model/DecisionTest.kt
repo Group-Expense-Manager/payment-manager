@@ -35,4 +35,4 @@ class DecisionTest : ShouldSpec({
             result shouldBe expectedAction
         }
     }
-},)
+})
