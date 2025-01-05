@@ -17,16 +17,21 @@ import pl.edu.agh.gem.paths.Paths.EXTERNAL
 import pl.edu.agh.gem.paths.Paths.INTERNAL
 import pl.edu.agh.gem.security.GemUser
 import java.net.URI
-import java.util.*
+import java.util.Optional
 
 @Component
 @Lazy
 class ServiceTestClient(applicationContext: WebApplicationContext) {
-    private val webClient = bindToApplicationContext(applicationContext)
-        .configureClient()
-        .build()
+    private val webClient =
+        bindToApplicationContext(applicationContext)
+            .configureClient()
+            .build()
 
-    fun createPayment(body: Any, user: GemUser, groupId: String): ResponseSpec {
+    fun createPayment(
+        body: Any,
+        user: GemUser,
+        groupId: String,
+    ): ResponseSpec {
         return webClient.post()
             .uri { it.path("$EXTERNAL/payments").queryParam("groupId", groupId).build() }
             .headers {
@@ -36,14 +41,22 @@ class ServiceTestClient(applicationContext: WebApplicationContext) {
             .bodyValue(body)
             .exchange()
     }
-    fun getPayment(user: GemUser, paymentId: String, groupId: String): ResponseSpec {
+
+    fun getPayment(
+        user: GemUser,
+        paymentId: String,
+        groupId: String,
+    ): ResponseSpec {
         return webClient.get()
             .uri(URI("$EXTERNAL/payments/$paymentId/groups/$groupId"))
             .headers { it.withValidatedUser(user).withAppAcceptType() }
             .exchange()
     }
 
-    fun decide(body: Any, user: GemUser): ResponseSpec {
+    fun decide(
+        body: Any,
+        user: GemUser,
+    ): ResponseSpec {
         return webClient.post()
             .uri(URI("$EXTERNAL/payments/decide"))
             .headers { it.withValidatedUser(user).withAppContentType() }
@@ -51,14 +64,23 @@ class ServiceTestClient(applicationContext: WebApplicationContext) {
             .exchange()
     }
 
-    fun delete(user: GemUser, groupId: String, paymentId: String): ResponseSpec {
+    fun delete(
+        user: GemUser,
+        groupId: String,
+        paymentId: String,
+    ): ResponseSpec {
         return webClient.delete()
             .uri(URI("$EXTERNAL/payments/$paymentId/groups/$groupId"))
             .headers { it.withValidatedUser(user) }
             .exchange()
     }
 
-    fun updatePayment(body: Any, user: GemUser, groupId: String, paymentId: String): ResponseSpec {
+    fun updatePayment(
+        body: Any,
+        user: GemUser,
+        groupId: String,
+        paymentId: String,
+    ): ResponseSpec {
         return webClient.put()
             .uri(URI("$EXTERNAL/payments/$paymentId/groups/$groupId"))
             .headers {
@@ -68,6 +90,7 @@ class ServiceTestClient(applicationContext: WebApplicationContext) {
             .bodyValue(body)
             .exchange()
     }
+
     fun getGroupActivitiesResponse(
         user: GemUser,
         groupId: String,
@@ -90,14 +113,20 @@ class ServiceTestClient(applicationContext: WebApplicationContext) {
             .exchange()
     }
 
-    fun getAcceptedGroupPayments(groupId: String, currency: String): ResponseSpec {
+    fun getAcceptedGroupPayments(
+        groupId: String,
+        currency: String,
+    ): ResponseSpec {
         return webClient.get()
             .uri { it.path("$INTERNAL/payments/accepted/groups/$groupId").queryParam("currency", currency).build() }
             .headers { it.withAppAcceptType() }
             .exchange()
     }
 
-    fun getUserBalance(groupId: String, userId: String): ResponseSpec {
+    fun getUserBalance(
+        groupId: String,
+        userId: String,
+    ): ResponseSpec {
         return webClient.get()
             .uri(URI("$INTERNAL/payments/balance/groups/$groupId/users/$userId"))
             .headers { it.withAppAcceptType() }

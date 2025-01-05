@@ -12,16 +12,17 @@ data class BalanceElementDto(
     val value: BigDecimal,
     val currency: String,
     val exchangeRate: BigDecimal?,
-
 )
 
-private fun BalanceElement.toDto() = BalanceElementDto(
-    value = value,
-    currency = currency,
-    exchangeRate = exchangeRate,
-)
+private fun BalanceElement.toDto() =
+    BalanceElementDto(
+        value = value,
+        currency = currency,
+        exchangeRate = exchangeRate,
+    )
 
-fun List<BalanceElement>.toUserBalanceResponse(userId: String) = UserBalanceResponse(
-    userId = userId,
-    elements = map { it.toDto() },
-)
+fun List<BalanceElement>.toUserBalanceResponse(userId: String) =
+    UserBalanceResponse(
+        userId = userId,
+        elements = map { it.toDto() },
+    )

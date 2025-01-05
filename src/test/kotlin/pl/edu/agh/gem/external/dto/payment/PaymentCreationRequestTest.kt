@@ -33,4 +33,4 @@ class PaymentCreationRequestTest : ShouldSpec({
             it.attachmentId shouldBe paymentCreationRequest.attachmentId
         }
     }
-},)
+})

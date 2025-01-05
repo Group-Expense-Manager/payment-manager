@@ -18,20 +18,21 @@ data class PaymentCreation(
     val message: String? = null,
     val attachmentId: String?,
 ) {
-    fun toPayment(fxData: FxData?) = Payment(
-        id = randomUUID().toString(),
-        groupId = groupId,
-        creatorId = creatorId,
-        recipientId = recipientId,
-        title = title,
-        type = type,
-        amount = amount,
-        fxData = fxData,
-        date = date,
-        createdAt = now(),
-        updatedAt = now(),
-        attachmentId = attachmentId,
-        status = PENDING,
-        history = arrayListOf(PaymentHistoryEntry(creatorId, CREATED, comment = message)),
-    )
+    fun toPayment(fxData: FxData?) =
+        Payment(
+            id = randomUUID().toString(),
+            groupId = groupId,
+            creatorId = creatorId,
+            recipientId = recipientId,
+            title = title,
+            type = type,
+            amount = amount,
+            fxData = fxData,
+            date = date,
+            createdAt = now(),
+            updatedAt = now(),
+            attachmentId = attachmentId,
+            status = PENDING,
+            history = arrayListOf(PaymentHistoryEntry(creatorId, CREATED, comment = message)),
+        )
 }

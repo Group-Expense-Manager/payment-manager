@@ -38,33 +38,37 @@ class GroupPaymentsResponseTest : ShouldSpec({
         val creatorIds = listOf("creatorId1", "creatorId2", "creatorId3")
         val recipientIds = listOf("recipientId1", "recipientId2", "recipientId3")
         val titles = listOf("title1", "title2", "title3")
-        val amounts = listOf(
-            Amount(value = BigDecimal.ONE, currency = "PLN"),
-            Amount(value = BigDecimal.TWO, currency = "EUR"),
-            Amount(value = BigDecimal.TEN, currency = "USD"),
-        )
-
-        val fxDataList = listOf(
-            null,
-            FxData(targetCurrency = "PLN", exchangeRate = BigDecimal.TWO),
-            FxData(targetCurrency = "EUR", exchangeRate = BigDecimal.ONE),
-        )
-
-        val dates = listOf(
-            Instant.ofEpochSecond(1000),
-            Instant.ofEpochSecond(2000),
-            Instant.ofEpochSecond(3000),
-        )
-        val payments = creatorIds.mapIndexed { index, creatorId ->
-            createPayment(
-                creatorId = creatorId,
-                recipientId = recipientIds[index],
-                title = titles[index],
-                amount = amounts[index],
-                fxData = fxDataList[index],
-                date = dates[index],
+        val amounts =
+            listOf(
+                Amount(value = BigDecimal.ONE, currency = "PLN"),
+                Amount(value = BigDecimal.TWO, currency = "EUR"),
+                Amount(value = BigDecimal.TEN, currency = "USD"),
             )
-        }
+
+        val fxDataList =
+            listOf(
+                null,
+                FxData(targetCurrency = "PLN", exchangeRate = BigDecimal.TWO),
+                FxData(targetCurrency = "EUR", exchangeRate = BigDecimal.ONE),
+            )
+
+        val dates =
+            listOf(
+                Instant.ofEpochSecond(1000),
+                Instant.ofEpochSecond(2000),
+                Instant.ofEpochSecond(3000),
+            )
+        val payments =
+            creatorIds.mapIndexed { index, creatorId ->
+                createPayment(
+                    creatorId = creatorId,
+                    recipientId = recipientIds[index],
+                    title = titles[index],
+                    amount = amounts[index],
+                    fxData = fxDataList[index],
+                    date = dates[index],
+                )
+            }
 
         // when
         val groupPaymentsResponse = payments.toAcceptedGroupPaymentsResponse(GROUP_ID)
@@ -95,4 +99,4 @@ class GroupPaymentsResponseTest : ShouldSpec({
             it.payments shouldBe listOf()
         }
     }
-},)
+})

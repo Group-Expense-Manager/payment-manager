@@ -31,9 +31,7 @@ import pl.edu.agh.gem.security.GemUserId
 class ExternalPaymentController(
     private val paymentService: PaymentService,
     private val groupManagerClient: GroupManagerClient,
-
 ) {
-
     @PostMapping(consumes = [APPLICATION_JSON_INTERNAL_VER_1], produces = [APPLICATION_JSON_INTERNAL_VER_1])
     @ResponseStatus(CREATED)
     fun createPayment(

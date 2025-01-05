@@ -183,17 +183,12 @@ fun createPayment(
     status = status,
     history = history,
 )
-fun createCurrencies(
-    vararg currencies: String = arrayOf(CURRENCY_1),
-) = currencies.map { Currency(it) }
 
-fun createCurrenciesResponse(
-    vararg currencies: String = arrayOf(CURRENCY_1),
-) = CurrenciesResponse(currencies.map { CurrencyDTO(it) })
+fun createCurrencies(vararg currencies: String = arrayOf(CURRENCY_1)) = currencies.map { Currency(it) }
 
-fun createExchangeRate(
-    value: BigDecimal = EXCHANGE_RATE_VALUE,
-) = ExchangeRate(value)
+fun createCurrenciesResponse(vararg currencies: String = arrayOf(CURRENCY_1)) = CurrenciesResponse(currencies.map { CurrencyDTO(it) })
+
+fun createExchangeRate(value: BigDecimal = EXCHANGE_RATE_VALUE) = ExchangeRate(value)
 
 fun createExchangeRateResponse(
     currencyFrom: String = CURRENCY_1,
@@ -207,13 +202,9 @@ fun createExchangeRateResponse(
     createdAt = createdAt,
 )
 
-fun createCurrenciesDTO(
-    vararg currency: String = arrayOf(CURRENCY_1, CURRENCY_2),
-) = currency.map { CurrencyDTO(it) }
+fun createCurrenciesDTO(vararg currency: String = arrayOf(CURRENCY_1, CURRENCY_2)) = currency.map { CurrencyDTO(it) }
 
-fun createMembersDTO(
-    vararg members: String = arrayOf(USER_ID, OTHER_USER_ID),
-) = members.map { MemberDTO(it) }
+fun createMembersDTO(vararg members: String = arrayOf(USER_ID, OTHER_USER_ID)) = members.map { MemberDTO(it) }
 
 fun createGroupResponse(
     members: List<MemberDTO> = listOf(USER_ID, OTHER_USER_ID).map { MemberDTO(it) },
@@ -223,9 +214,7 @@ fun createGroupResponse(
     groupCurrencies = groupCurrencies,
 )
 
-fun createUserGroupsResponse(
-    vararg groups: String = arrayOf(GROUP_ID, OTHER_GROUP_ID),
-) = UserGroupsResponse(groups = groups.map { GroupDto(it) })
+fun createUserGroupsResponse(vararg groups: String = arrayOf(GROUP_ID, OTHER_GROUP_ID)) = UserGroupsResponse(groups = groups.map { GroupDto(it) })
 
 fun createGroup(
     members: GroupMembers = createGroupMembers(USER_ID, OTHER_USER_ID),
@@ -301,35 +290,32 @@ fun createPaymentUpdate(
     date = date,
     message = message,
     attachmentId = attachmentId,
-
 )
 
-fun createPaymentUpdateFromPayment(
-    payment: Payment,
-) = PaymentUpdate(
-    id = payment.id,
-    groupId = payment.groupId,
-    userId = payment.creatorId,
-    title = payment.title,
-    type = payment.type,
-    amount = payment.amount,
-    targetCurrency = payment.fxData?.targetCurrency,
-    date = payment.date,
-    message = null,
-    attachmentId = payment.attachmentId,
-)
+fun createPaymentUpdateFromPayment(payment: Payment) =
+    PaymentUpdate(
+        id = payment.id,
+        groupId = payment.groupId,
+        userId = payment.creatorId,
+        title = payment.title,
+        type = payment.type,
+        amount = payment.amount,
+        targetCurrency = payment.fxData?.targetCurrency,
+        date = payment.date,
+        message = null,
+        attachmentId = payment.attachmentId,
+    )
 
-fun createPaymentUpdateRequestFromPayment(
-    payment: Payment,
-) = PaymentUpdateRequest(
-    title = payment.title,
-    type = payment.type,
-    amount = payment.amount.toAmountDto(),
-    targetCurrency = payment.fxData?.targetCurrency,
-    date = payment.date,
-    message = null,
-    attachmentId = payment.attachmentId,
-)
+fun createPaymentUpdateRequestFromPayment(payment: Payment) =
+    PaymentUpdateRequest(
+        title = payment.title,
+        type = payment.type,
+        amount = payment.amount.toAmountDto(),
+        targetCurrency = payment.fxData?.targetCurrency,
+        date = payment.date,
+        message = null,
+        attachmentId = payment.attachmentId,
+    )
 
 fun createFilterOptions(
     title: String? = null,
@@ -346,6 +332,7 @@ fun createFilterOptions(
     sortedBy = sortedBy,
     sortOrder = sortOrder,
 )
+
 fun createBalanceElement(
     value: BigDecimal = BigDecimal.ONE,
     currency: String = CURRENCY_1,

@@ -10,7 +10,8 @@ data class ExchangeRateResponse(
     val rate: BigDecimal,
     val createdAt: Instant,
 ) {
-    fun toDomain() = ExchangeRate(
-        value = rate,
-    )
+    fun toDomain() =
+        ExchangeRate(
+            value = rate,
+        )
 }

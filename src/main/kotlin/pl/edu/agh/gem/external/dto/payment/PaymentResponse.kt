@@ -21,21 +21,22 @@ data class PaymentResponse(
     val history: List<PaymentHistoryDto>,
 )
 
-fun Payment.toPaymentResponse() = PaymentResponse(
-    paymentId = id,
-    creatorId = creatorId,
-    recipientId = recipientId,
-    title = title,
-    type = type.name,
-    amount = amount.toAmountDto(),
-    fxData = fxData?.toDto(),
-    date = date,
-    createdAt = createdAt,
-    updatedAt = updatedAt,
-    attachmentId = attachmentId,
-    status = status.name,
-    history = history.map { it.toDto() },
-)
+fun Payment.toPaymentResponse() =
+    PaymentResponse(
+        paymentId = id,
+        creatorId = creatorId,
+        recipientId = recipientId,
+        title = title,
+        type = type.name,
+        amount = amount.toAmountDto(),
+        fxData = fxData?.toDto(),
+        date = date,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
+        attachmentId = attachmentId,
+        status = status.name,
+        history = history.map { it.toDto() },
+    )
 
 data class PaymentHistoryDto(
     val participantId: String,
@@ -44,11 +45,12 @@ data class PaymentHistoryDto(
     val comment: String?,
 )
 
-fun PaymentHistoryEntry.toDto() = PaymentHistoryDto(
-    participantId = participantId,
-    paymentAction = paymentAction.name,
-    createdAt = createdAt,
-    comment = comment,
-)
+fun PaymentHistoryEntry.toDto() =
+    PaymentHistoryDto(
+        participantId = participantId,
+        paymentAction = paymentAction.name,
+        createdAt = createdAt,
+        comment = comment,
+    )
 
 fun Amount.toAmountDto() = AmountDto(value, currency)

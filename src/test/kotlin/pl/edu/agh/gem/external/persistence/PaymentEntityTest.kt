@@ -58,4 +58,4 @@ class PaymentEntityTest : ShouldSpec({
             it.history shouldBe payment.history
         }
     }
-},)
+})

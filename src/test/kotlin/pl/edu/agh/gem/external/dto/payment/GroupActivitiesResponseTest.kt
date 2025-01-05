@@ -46,36 +46,39 @@ class GroupActivitiesResponseTest : ShouldSpec({
         val recipientIds = listOf("recipientId1", "recipientId2", "recipientId3")
 
         val titles = listOf("title1", "title2", "title3")
-        val amounts = listOf(
-            Amount(value = BigDecimal.ONE, currency = "PLN"),
-            Amount(value = BigDecimal.TWO, currency = "EUR"),
-            Amount(value = BigDecimal.TEN, currency = "USD"),
-        )
-        val fxData = listOf(
-            FxData(targetCurrency = "EUR", exchangeRate = "2".toBigDecimal()),
-            null,
-            FxData(targetCurrency = "PLN", exchangeRate = "3".toBigDecimal()),
-
-        )
+        val amounts =
+            listOf(
+                Amount(value = BigDecimal.ONE, currency = "PLN"),
+                Amount(value = BigDecimal.TWO, currency = "EUR"),
+                Amount(value = BigDecimal.TEN, currency = "USD"),
+            )
+        val fxData =
+            listOf(
+                FxData(targetCurrency = "EUR", exchangeRate = "2".toBigDecimal()),
+                null,
+                FxData(targetCurrency = "PLN", exchangeRate = "3".toBigDecimal()),
+            )
 
         val statuses = listOf(PENDING, ACCEPTED, REJECTED)
-        val dates = listOf(
-            Instant.ofEpochSecond(1000),
-            Instant.ofEpochSecond(2000),
-            Instant.ofEpochSecond(3000),
-        )
-        val payments = paymentIds.mapIndexed { index, paymentId ->
-            createPayment(
-                id = paymentId,
-                creatorId = creatorIds[index],
-                recipientId = recipientIds[index],
-                title = titles[index],
-                amount = amounts[index],
-                fxData = fxData[index],
-                status = statuses[index],
-                date = dates[index],
+        val dates =
+            listOf(
+                Instant.ofEpochSecond(1000),
+                Instant.ofEpochSecond(2000),
+                Instant.ofEpochSecond(3000),
             )
-        }
+        val payments =
+            paymentIds.mapIndexed { index, paymentId ->
+                createPayment(
+                    id = paymentId,
+                    creatorId = creatorIds[index],
+                    recipientId = recipientIds[index],
+                    title = titles[index],
+                    amount = amounts[index],
+                    fxData = fxData[index],
+                    status = statuses[index],
+                    date = dates[index],
+                )
+            }
 
         // when
         val groupActivitiesResponse = payments.toGroupActivitiesResponse(GROUP_ID)
@@ -108,4 +111,4 @@ class GroupActivitiesResponseTest : ShouldSpec({
             it.payments shouldBe listOf()
         }
     }
-},)
+})

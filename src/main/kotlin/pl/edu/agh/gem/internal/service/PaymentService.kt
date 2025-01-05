@@ -44,7 +44,6 @@ class PaymentService(
     private val paymentRepository: PaymentRepository,
     private val archivedPaymentRepository: ArchivedPaymentRepository,
 ) {
-
     val recipientValidator = RecipientValidator()
     val currenciesValidator = CurrenciesValidator()
     val decisionValidator = DecisionValidator()
@@ -56,7 +55,10 @@ class PaymentService(
         return groupManagerClient.getGroup(groupId)
     }
 
-    fun createPayment(groupData: GroupData, paymentCreation: PaymentCreation): Payment {
+    fun createPayment(
+        groupData: GroupData,
+        paymentCreation: PaymentCreation,
+    ): Payment {
         val dataWrapper = createPaymentCreationDataWrapper(groupData, paymentCreation)
         validate(dataWrapper, recipientValidator)
             .alsoValidate(dataWrapper, currenciesValidator)
@@ -72,7 +74,10 @@ class PaymentService(
         )
     }
 
-    private fun createPaymentCreationDataWrapper(groupData: GroupData, paymentCreation: PaymentCreation): PaymentCreationDataWrapper {
+    private fun createPaymentCreationDataWrapper(
+        groupData: GroupData,
+        paymentCreation: PaymentCreation,
+    ): PaymentCreationDataWrapper {
         return PaymentCreationDataWrapper(
             groupData.members,
             paymentCreation,
@@ -85,7 +90,10 @@ class PaymentService(
         )
     }
 
-    fun getPayment(paymentId: String, groupId: String): Payment {
+    fun getPayment(
+        paymentId: String,
+        groupId: String,
+    ): Payment {
         return paymentRepository.findByPaymentIdAndGroupId(paymentId, groupId) ?: throw MissingPaymentException(paymentId, groupId)
     }
 
@@ -93,17 +101,19 @@ class PaymentService(
         paymentCreation.targetCurrency?.let {
             FxData(
                 targetCurrency = paymentCreation.targetCurrency,
-                exchangeRate = currencyManagerClient.getExchangeRate(
-                    paymentCreation.amount.currency,
-                    paymentCreation.targetCurrency,
-                    paymentCreation.date.atZone(ZoneId.systemDefault()).toLocalDate(),
-                ).value,
+                exchangeRate =
+                    currencyManagerClient.getExchangeRate(
+                        paymentCreation.amount.currency,
+                        paymentCreation.targetCurrency,
+                        paymentCreation.date.atZone(ZoneId.systemDefault()).toLocalDate(),
+                    ).value,
             )
         }
 
     fun decide(paymentDecision: PaymentDecision): Payment {
-        val payment = paymentRepository.findByPaymentIdAndGroupId(paymentDecision.paymentId, paymentDecision.groupId)
-            ?: throw MissingPaymentException(paymentDecision.paymentId, paymentDecision.groupId)
+        val payment =
+            paymentRepository.findByPaymentIdAndGroupId(paymentDecision.paymentId, paymentDecision.groupId)
+                ?: throw MissingPaymentException(paymentDecision.paymentId, paymentDecision.groupId)
 
         val dataWrapper = PaymentDecisionDataWrapper(paymentDecision, payment)
         validate(dataWrapper, decisionValidator)
@@ -128,11 +138,12 @@ class PaymentService(
     }
 
     private fun Payment.addDecision(paymentDecision: PaymentDecision): Payment {
-        val paymentHistoryEntry = PaymentHistoryEntry(
-            participantId = paymentDecision.userId,
-            paymentAction = paymentDecision.decision.toPaymentAction(),
-            comment = paymentDecision.message,
-        )
+        val paymentHistoryEntry =
+            PaymentHistoryEntry(
+                participantId = paymentDecision.userId,
+                paymentAction = paymentDecision.decision.toPaymentAction(),
+                comment = paymentDecision.message,
+            )
         val updatedHistory = history + paymentHistoryEntry
 
         return copy(
@@ -142,15 +153,21 @@ class PaymentService(
         )
     }
 
-    fun deletePayment(paymentId: String, groupId: String, userId: String) {
+    fun deletePayment(
+        paymentId: String,
+        groupId: String,
+        userId: String,
+    ) {
         val paymentToDelete = paymentRepository.findByPaymentIdAndGroupId(paymentId, groupId) ?: throw MissingPaymentException(paymentId, groupId)
 
-        val dataWrapper = PaymentDeletionDataWrapper(
-            creatorData = CreatorData(
-                creatorId = paymentToDelete.creatorId,
-                userId = userId,
-            ),
-        )
+        val dataWrapper =
+            PaymentDeletionDataWrapper(
+                creatorData =
+                    CreatorData(
+                        creatorId = paymentToDelete.creatorId,
+                        userId = userId,
+                    ),
+            )
         validate(dataWrapper, creatorValidator)
             .takeIf { it.isNotEmpty() }
             ?.also { throw ValidatorsException(it) }
@@ -163,34 +180,40 @@ class PaymentService(
         }
     }
 
-    fun updatePayment(groupData: GroupData, update: PaymentUpdate): Payment {
-        val originalPayment = paymentRepository.findByPaymentIdAndGroupId(update.id, update.groupId)
-            ?: throw MissingPaymentException(update.id, update.groupId)
+    fun updatePayment(
+        groupData: GroupData,
+        update: PaymentUpdate,
+    ): Payment {
+        val originalPayment =
+            paymentRepository.findByPaymentIdAndGroupId(update.id, update.groupId)
+                ?: throw MissingPaymentException(update.id, update.groupId)
 
-        val dataWrapper = createPaymentUpdateDataWrapper(
-            originalPayment = originalPayment,
-            paymentUpdate = update,
-            groupData = groupData,
-        )
+        val dataWrapper =
+            createPaymentUpdateDataWrapper(
+                originalPayment = originalPayment,
+                paymentUpdate = update,
+                groupData = groupData,
+            )
 
         validate(dataWrapper, creatorValidator)
             .alsoValidate(dataWrapper, currenciesValidator)
             .takeIf { it.isNotEmpty() }
             ?.also { throw ValidatorsException(it) }
 
-        val updatedPayment = paymentRepository.save(
-            originalPayment.copy(
-                title = update.title,
-                type = update.type,
-                amount = update.amount,
-                fxData = updateFxData(originalPayment = originalPayment, paymentUpdate = update),
-                date = update.date,
-                updatedAt = now(),
-                status = PENDING,
-                history = originalPayment.history + PaymentHistoryEntry(originalPayment.creatorId, EDITED, now(), update.message),
-                attachmentId = update.attachmentId,
-            ),
-        )
+        val updatedPayment =
+            paymentRepository.save(
+                originalPayment.copy(
+                    title = update.title,
+                    type = update.type,
+                    amount = update.amount,
+                    fxData = updateFxData(originalPayment = originalPayment, paymentUpdate = update),
+                    date = update.date,
+                    updatedAt = now(),
+                    status = PENDING,
+                    history = originalPayment.history + PaymentHistoryEntry(originalPayment.creatorId, EDITED, now(), update.message),
+                    attachmentId = update.attachmentId,
+                ),
+            )
 
         if (originalPayment.status == ACCEPTED) {
             generateBalancesAndSettlements(originalPayment)
@@ -199,23 +222,30 @@ class PaymentService(
         return updatedPayment
     }
 
-    private fun updateFxData(originalPayment: Payment, paymentUpdate: PaymentUpdate): FxData? {
+    private fun updateFxData(
+        originalPayment: Payment,
+        paymentUpdate: PaymentUpdate,
+    ): FxData? {
         if (shouldUseOriginalFxData(originalPayment, paymentUpdate)) {
             return originalPayment.fxData
         }
         return paymentUpdate.targetCurrency?.let {
             FxData(
                 targetCurrency = paymentUpdate.targetCurrency,
-                exchangeRate = currencyManagerClient.getExchangeRate(
-                    paymentUpdate.amount.currency,
-                    paymentUpdate.targetCurrency,
-                    paymentUpdate.date.atZone(ZoneId.systemDefault()).toLocalDate(),
-                ).value,
+                exchangeRate =
+                    currencyManagerClient.getExchangeRate(
+                        paymentUpdate.amount.currency,
+                        paymentUpdate.targetCurrency,
+                        paymentUpdate.date.atZone(ZoneId.systemDefault()).toLocalDate(),
+                    ).value,
             )
         }
     }
 
-    private fun shouldUseOriginalFxData(originalPayment: Payment, update: PaymentUpdate): Boolean {
+    private fun shouldUseOriginalFxData(
+        originalPayment: Payment,
+        update: PaymentUpdate,
+    ): Boolean {
         return originalPayment.date == update.date && originalPayment.amount.currency == update.amount.currency &&
             originalPayment.fxData?.targetCurrency == update.targetCurrency
     }
@@ -227,29 +257,40 @@ class PaymentService(
     ) = PaymentUpdateDataWrapper(
         originalPayment = originalPayment,
         paymentUpdate = paymentUpdate,
-        currencyData = CurrencyData(
-            groupData.currencies,
-            currencyManagerClient.getAvailableCurrencies(),
-            paymentUpdate.amount.currency,
-            paymentUpdate.targetCurrency,
-        ),
-        creatorData = CreatorData(
-            creatorId = originalPayment.creatorId,
-            userId = paymentUpdate.userId,
-        ),
+        currencyData =
+            CurrencyData(
+                groupData.currencies,
+                currencyManagerClient.getAvailableCurrencies(),
+                paymentUpdate.amount.currency,
+                paymentUpdate.targetCurrency,
+            ),
+        creatorData =
+            CreatorData(
+                creatorId = originalPayment.creatorId,
+                userId = paymentUpdate.userId,
+            ),
     )
 
-    fun getGroupActivities(groupId: String, filterOptions: FilterOptions?): List<Payment> {
+    fun getGroupActivities(
+        groupId: String,
+        filterOptions: FilterOptions?,
+    ): List<Payment> {
         return paymentRepository.findByGroupId(groupId, filterOptions)
     }
 
-    fun getAcceptedGroupPayments(groupId: String, currency: String): List<Payment> {
+    fun getAcceptedGroupPayments(
+        groupId: String,
+        currency: String,
+    ): List<Payment> {
         return paymentRepository.findByGroupId(groupId).filter {
             it.status == ACCEPTED && (it.fxData?.targetCurrency ?: it.amount.currency) == currency
         }
     }
 
-    fun getUserBalance(groupId: String, userId: String): List<BalanceElement> {
+    fun getUserBalance(
+        groupId: String,
+        userId: String,
+    ): List<BalanceElement> {
         return paymentRepository.findByGroupId(groupId)
             .mapNotNull { balanceElementMapper.mapToBalanceElement(userId = userId, payment = it) }
     }

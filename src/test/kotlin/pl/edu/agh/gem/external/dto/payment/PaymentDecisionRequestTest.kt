@@ -23,4 +23,4 @@ class PaymentDecisionRequestTest : ShouldSpec({
             it.message shouldBe paymentDecision.message
         }
     }
-},)
+})

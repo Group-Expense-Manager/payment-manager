@@ -20,20 +20,22 @@ data class GroupActivityDTO(
     val date: Instant,
 ) {
     companion object {
-        fun fromPayment(payment: Payment) = GroupActivityDTO(
-            paymentId = payment.id,
-            creatorId = payment.creatorId,
-            recipientId = payment.recipientId,
-            title = payment.title,
-            amount = payment.amount.toAmountDto(),
-            fxData = payment.fxData?.toDto(),
-            status = payment.status,
-            date = payment.date,
-        )
+        fun fromPayment(payment: Payment) =
+            GroupActivityDTO(
+                paymentId = payment.id,
+                creatorId = payment.creatorId,
+                recipientId = payment.recipientId,
+                title = payment.title,
+                amount = payment.amount.toAmountDto(),
+                fxData = payment.fxData?.toDto(),
+                status = payment.status,
+                date = payment.date,
+            )
     }
 }
 
-fun List<Payment>.toGroupActivitiesResponse(groupId: String) = GroupActivitiesResponse(
-    groupId = groupId,
-    payments = map { GroupActivityDTO.fromPayment(it) },
-)
+fun List<Payment>.toGroupActivitiesResponse(groupId: String) =
+    GroupActivitiesResponse(
+        groupId = groupId,
+        payments = map { GroupActivityDTO.fromPayment(it) },
+    )

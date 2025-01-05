@@ -39,317 +39,323 @@ class InternalPaymentControllerIT(
     private val service: ServiceTestClient,
     private val paymentRepository: PaymentRepository,
 ) : BaseIntegrationSpec({
-    should("get group activities") {
-        // given
-        val payment = createPayment(groupId = GROUP_ID)
-        paymentRepository.save(payment)
+        should("get group activities") {
+            // given
+            val payment = createPayment(groupId = GROUP_ID)
+            paymentRepository.save(payment)
 
-        // when
-        val response = service.getGroupActivitiesResponse(createGemUser(USER_ID), GROUP_ID)
+            // when
+            val response = service.getGroupActivitiesResponse(createGemUser(USER_ID), GROUP_ID)
 
-        // then
-        response shouldHaveHttpStatus OK
-        response.shouldBody<GroupActivitiesResponse> {
-            groupId shouldBe GROUP_ID
-            payments shouldHaveSize 1
-            payments.first().also {
-                it.paymentId shouldBe payment.id
-                it.creatorId shouldBe payment.creatorId
-                it.recipientId shouldBe payment.recipientId
-                it.title shouldBe payment.title
-                it.amount shouldBe payment.amount.toAmountDto()
-                it.fxData shouldBe payment.fxData?.toDto()
-                it.status shouldBe payment.status
-                it.date shouldBe payment.date
+            // then
+            response shouldHaveHttpStatus OK
+            response.shouldBody<GroupActivitiesResponse> {
+                groupId shouldBe GROUP_ID
+                payments shouldHaveSize 1
+                payments.first().also {
+                    it.paymentId shouldBe payment.id
+                    it.creatorId shouldBe payment.creatorId
+                    it.recipientId shouldBe payment.recipientId
+                    it.title shouldBe payment.title
+                    it.amount shouldBe payment.amount.toAmountDto()
+                    it.fxData shouldBe payment.fxData?.toDto()
+                    it.status shouldBe payment.status
+                    it.date shouldBe payment.date
+                }
             }
         }
-    }
 
-    should("get empty list when attempting to get group activities") {
-        // given
-        val payment = createPayment(groupId = OTHER_GROUP_ID)
-        paymentRepository.save(payment)
+        should("get empty list when attempting to get group activities") {
+            // given
+            val payment = createPayment(groupId = OTHER_GROUP_ID)
+            paymentRepository.save(payment)
 
-        // when
-        val response = service.getGroupActivitiesResponse(createGemUser(USER_ID), GROUP_ID)
+            // when
+            val response = service.getGroupActivitiesResponse(createGemUser(USER_ID), GROUP_ID)
 
-        // then
-        response shouldHaveHttpStatus OK
-        response.shouldBody<GroupActivitiesResponse> {
-            groupId shouldBe GROUP_ID
-            payments shouldHaveSize 0
-        }
-    }
-
-    should("get group activities with given title") {
-        // given
-        val payment1 = createPayment(id = "1", groupId = GROUP_ID, title = "Pizza in Krakow")
-        val payment2 = createPayment(id = "2", groupId = GROUP_ID, title = "The best burger")
-        val payment3 = createPayment(id = "3", groupId = GROUP_ID, title = "Spaghetti with Andrzej")
-
-        listOf(payment1, payment2, payment3).forEach { paymentRepository.save(it) }
-
-        // when
-        val response = service.getGroupActivitiesResponse(createGemUser(USER_ID), GROUP_ID, title = "KRA")
-
-        // then
-        response shouldHaveHttpStatus OK
-        response.shouldBody<GroupActivitiesResponse> {
-            groupId shouldBe GROUP_ID
-            payments shouldHaveSize 1
-            payments.first().paymentId shouldBe payment1.id
-        }
-    }
-
-    should("get group activities with given status") {
-        // given
-        val payment1 = createPayment(id = "1", groupId = GROUP_ID, status = REJECTED)
-        val payment2 = createPayment(id = "2", groupId = GROUP_ID, status = ACCEPTED)
-        val payment3 = createPayment(id = "3", groupId = GROUP_ID, status = PENDING)
-
-        listOf(payment1, payment2, payment3).forEach { paymentRepository.save(it) }
-
-        // when
-        val response = service.getGroupActivitiesResponse(createGemUser(USER_ID), GROUP_ID, status = PENDING)
-
-        // then
-        response shouldHaveHttpStatus OK
-        response.shouldBody<GroupActivitiesResponse> {
-            groupId shouldBe GROUP_ID
-            payments shouldHaveSize 1
-            payments.first().paymentId shouldBe payment3.id
-        }
-    }
-
-    should("get group activities with given creatorId") {
-        // given
-        val payment1 = createPayment(id = "1", groupId = GROUP_ID, creatorId = "1")
-        val payment2 = createPayment(id = "2", groupId = GROUP_ID, creatorId = "2")
-        val payment3 = createPayment(id = "3", groupId = GROUP_ID, creatorId = "1")
-
-        listOf(payment1, payment2, payment3).forEach { paymentRepository.save(it) }
-
-        // when
-        val response = service.getGroupActivitiesResponse(createGemUser(USER_ID), GROUP_ID, creatorId = "1")
-
-        // then
-        response shouldHaveHttpStatus OK
-        response.shouldBody<GroupActivitiesResponse> {
-            groupId shouldBe GROUP_ID
-            payments shouldHaveSize 2
-            payments.map { it.paymentId } shouldContainExactly listOf(payment1.id, payment3.id)
-        }
-    }
-
-    should("get group activities sorted by title") {
-        // given
-        val payment1 = createPayment(id = "1", groupId = GROUP_ID, title = "Pizza in Krakow")
-        val payment2 = createPayment(id = "2", groupId = GROUP_ID, title = "The best burger")
-        val payment3 = createPayment(id = "3", groupId = GROUP_ID, title = "Spaghetti with Andrzej")
-
-        listOf(payment1, payment2, payment3).forEach { paymentRepository.save(it) }
-
-        // when
-        val response = service.getGroupActivitiesResponse(createGemUser(USER_ID), GROUP_ID, sortedBy = TITLE)
-
-        // then
-        response shouldHaveHttpStatus OK
-        response.shouldBody<GroupActivitiesResponse> {
-            groupId shouldBe GROUP_ID
-            payments shouldHaveSize 3
-            payments.map { it.paymentId } shouldContainExactly listOf(payment1.id, payment3.id, payment2.id)
-        }
-    }
-
-    should("get group activities sorted by date") {
-        // given
-        val payment1 = createPayment(id = "1", groupId = GROUP_ID, date = ofEpochMilli(2))
-        val payment2 = createPayment(id = "2", groupId = GROUP_ID, date = ofEpochMilli(3))
-        val payment3 = createPayment(id = "3", groupId = GROUP_ID, date = ofEpochMilli(1))
-
-        listOf(payment1, payment2, payment3).forEach { paymentRepository.save(it) }
-
-        // when
-        val response = service.getGroupActivitiesResponse(createGemUser(USER_ID), GROUP_ID, sortedBy = DATE)
-
-        // then
-        response shouldHaveHttpStatus OK
-        response.shouldBody<GroupActivitiesResponse> {
-            groupId shouldBe GROUP_ID
-            payments shouldHaveSize 3
-            payments.map { it.paymentId } shouldContainExactly listOf(payment3.id, payment1.id, payment2.id)
-        }
-    }
-
-    should("get group activities sorted by date ascending") {
-        // given
-        val payment1 = createPayment(id = "1", groupId = GROUP_ID, date = ofEpochMilli(2))
-        val payment2 = createPayment(id = "2", groupId = GROUP_ID, date = ofEpochMilli(3))
-        val payment3 = createPayment(id = "3", groupId = GROUP_ID, date = ofEpochMilli(1))
-
-        listOf(payment1, payment2, payment3).forEach { paymentRepository.save(it) }
-
-        // when
-        val response = service.getGroupActivitiesResponse(createGemUser(USER_ID), GROUP_ID, sortOrder = ASCENDING)
-
-        // then
-        response shouldHaveHttpStatus OK
-        response.shouldBody<GroupActivitiesResponse> {
-            groupId shouldBe GROUP_ID
-            payments shouldHaveSize 3
-            payments.map { it.paymentId } shouldContainExactly listOf(payment3.id, payment1.id, payment2.id)
-        }
-    }
-
-    should("get group activities sorted by date descending") {
-        // given
-        val payment1 = createPayment(id = "1", groupId = GROUP_ID, date = ofEpochMilli(2))
-        val payment2 = createPayment(id = "2", groupId = GROUP_ID, date = ofEpochMilli(3))
-        val payment3 = createPayment(id = "3", groupId = GROUP_ID, date = ofEpochMilli(1))
-
-        listOf(payment1, payment2, payment3).forEach { paymentRepository.save(it) }
-
-        // when
-        val response = service.getGroupActivitiesResponse(createGemUser(USER_ID), GROUP_ID, sortOrder = DESCENDING)
-
-        // then
-        response shouldHaveHttpStatus OK
-        response.shouldBody<GroupActivitiesResponse> {
-            groupId shouldBe GROUP_ID
-            payments shouldHaveSize 3
-            payments.map { it.paymentId } shouldContainExactly listOf(payment2.id, payment1.id, payment3.id)
-        }
-    }
-
-    should("get accepted group payments") {
-        // given
-        val acceptedPayment1 = createPayment(
-            id = "1",
-            status = ACCEPTED,
-            amount = createAmount(currency = CURRENCY_1),
-            fxData = createFxData(targetCurrency = CURRENCY_2),
-        )
-        val acceptedPayment2 = createPayment(
-            id = "2",
-            status = ACCEPTED,
-            amount = createAmount(currency = CURRENCY_2),
-            fxData = null,
-        )
-        val paymentsToSave = listOf(
-            acceptedPayment1,
-            acceptedPayment2,
-            createPayment(
-                id = "3",
-                status = ACCEPTED,
-                amount = createAmount(currency = CURRENCY_2),
-                fxData = createFxData(targetCurrency = CURRENCY_1),
-            ),
-            createPayment(
-                id = "4",
-                status = ACCEPTED,
-                amount = createAmount(currency = CURRENCY_1),
-                fxData = null,
-            ),
-            createPayment(
-                id = "5",
-                status = PENDING,
-                amount = createAmount(currency = CURRENCY_1),
-                fxData = createFxData(targetCurrency = CURRENCY_2),
-            ),
-            createPayment(
-                id = "6",
-                status = PENDING,
-                amount = createAmount(currency = CURRENCY_2),
-                fxData = null,
-            ),
-        )
-
-        paymentsToSave.forEach { paymentRepository.save(it) }
-
-        // when
-        val response = service.getAcceptedGroupPayments(GROUP_ID, CURRENCY_2)
-
-        // then
-        response shouldHaveHttpStatus OK
-        response.shouldBody<AcceptedGroupPaymentsResponse> {
-            groupId shouldBe GROUP_ID
-            payments shouldHaveSize 2
-            payments.first().also {
-                it.creatorId shouldBe acceptedPayment1.creatorId
-                it.recipientId shouldBe acceptedPayment1.recipientId
-                it.title shouldBe acceptedPayment1.title
-                it.amount shouldBe acceptedPayment1.amount.toAmountDto()
-                it.fxData shouldBe acceptedPayment1.fxData?.toDto()
-                it.date shouldBe acceptedPayment1.date
-            }
-
-            payments.last().also {
-                it.creatorId shouldBe acceptedPayment2.creatorId
-                it.recipientId shouldBe acceptedPayment1.recipientId
-                it.title shouldBe acceptedPayment2.title
-                it.amount shouldBe acceptedPayment2.amount.toAmountDto()
-                it.fxData shouldBe acceptedPayment2.fxData?.toDto()
-                it.date shouldBe acceptedPayment2.date
+            // then
+            response shouldHaveHttpStatus OK
+            response.shouldBody<GroupActivitiesResponse> {
+                groupId shouldBe GROUP_ID
+                payments shouldHaveSize 0
             }
         }
-    }
 
-    should("get user balance") {
-        // given
-        val payments = listOf(
-            createPayment(
-                id = "1",
-                status = ACCEPTED,
-                creatorId = USER_ID,
-                recipientId = OTHER_USER_ID,
-                amount = createAmount(
-                    value = 50.toBigDecimal(),
-                    currency = CURRENCY_1,
-                ),
-                fxData = createFxData(
-                    targetCurrency = CURRENCY_2,
-                    exchangeRate = "1.5".toBigDecimal(),
-                ),
-            ),
-            createPayment(
-                id = "2",
-                status = ACCEPTED,
-                creatorId = OTHER_USER_ID,
-                recipientId = USER_ID,
-                amount = createAmount(
-                    value = 50.toBigDecimal(),
-                    currency = CURRENCY_1,
-                ),
-                fxData = null,
-            ),
-            createPayment(
-                id = "3",
-                status = ACCEPTED,
-                creatorId = OTHER_USER_ID,
-                recipientId = ANOTHER_USER_ID,
-            ),
+        should("get group activities with given title") {
+            // given
+            val payment1 = createPayment(id = "1", groupId = GROUP_ID, title = "Pizza in Krakow")
+            val payment2 = createPayment(id = "2", groupId = GROUP_ID, title = "The best burger")
+            val payment3 = createPayment(id = "3", groupId = GROUP_ID, title = "Spaghetti with Andrzej")
 
-        )
-        payments.forEach { paymentRepository.save(it) }
+            listOf(payment1, payment2, payment3).forEach { paymentRepository.save(it) }
 
-        // when
-        val response = service.getUserBalance(GROUP_ID, USER_ID)
+            // when
+            val response = service.getGroupActivitiesResponse(createGemUser(USER_ID), GROUP_ID, title = "KRA")
 
-        // then
-        response shouldHaveHttpStatus OK
-        response.shouldBody<UserBalanceResponse> {
-            userId shouldBe USER_ID
-            elements.size shouldBe 2
-            elements.first().also { elem ->
-                elem.value shouldBe payments.first().amount.value
-                elem.currency shouldBe payments.first().fxData?.targetCurrency
-                elem.exchangeRate shouldBe payments.first().fxData?.exchangeRate
-            }
-            elements.last().also { elem ->
-                elem.value shouldBe payments[1].amount.value.negate()
-                elem.currency shouldBe payments[1].amount.currency
-                elem.exchangeRate.shouldBeNull()
+            // then
+            response shouldHaveHttpStatus OK
+            response.shouldBody<GroupActivitiesResponse> {
+                groupId shouldBe GROUP_ID
+                payments shouldHaveSize 1
+                payments.first().paymentId shouldBe payment1.id
             }
         }
-    }
-},)
+
+        should("get group activities with given status") {
+            // given
+            val payment1 = createPayment(id = "1", groupId = GROUP_ID, status = REJECTED)
+            val payment2 = createPayment(id = "2", groupId = GROUP_ID, status = ACCEPTED)
+            val payment3 = createPayment(id = "3", groupId = GROUP_ID, status = PENDING)
+
+            listOf(payment1, payment2, payment3).forEach { paymentRepository.save(it) }
+
+            // when
+            val response = service.getGroupActivitiesResponse(createGemUser(USER_ID), GROUP_ID, status = PENDING)
+
+            // then
+            response shouldHaveHttpStatus OK
+            response.shouldBody<GroupActivitiesResponse> {
+                groupId shouldBe GROUP_ID
+                payments shouldHaveSize 1
+                payments.first().paymentId shouldBe payment3.id
+            }
+        }
+
+        should("get group activities with given creatorId") {
+            // given
+            val payment1 = createPayment(id = "1", groupId = GROUP_ID, creatorId = "1")
+            val payment2 = createPayment(id = "2", groupId = GROUP_ID, creatorId = "2")
+            val payment3 = createPayment(id = "3", groupId = GROUP_ID, creatorId = "1")
+
+            listOf(payment1, payment2, payment3).forEach { paymentRepository.save(it) }
+
+            // when
+            val response = service.getGroupActivitiesResponse(createGemUser(USER_ID), GROUP_ID, creatorId = "1")
+
+            // then
+            response shouldHaveHttpStatus OK
+            response.shouldBody<GroupActivitiesResponse> {
+                groupId shouldBe GROUP_ID
+                payments shouldHaveSize 2
+                payments.map { it.paymentId } shouldContainExactly listOf(payment1.id, payment3.id)
+            }
+        }
+
+        should("get group activities sorted by title") {
+            // given
+            val payment1 = createPayment(id = "1", groupId = GROUP_ID, title = "Pizza in Krakow")
+            val payment2 = createPayment(id = "2", groupId = GROUP_ID, title = "The best burger")
+            val payment3 = createPayment(id = "3", groupId = GROUP_ID, title = "Spaghetti with Andrzej")
+
+            listOf(payment1, payment2, payment3).forEach { paymentRepository.save(it) }
+
+            // when
+            val response = service.getGroupActivitiesResponse(createGemUser(USER_ID), GROUP_ID, sortedBy = TITLE)
+
+            // then
+            response shouldHaveHttpStatus OK
+            response.shouldBody<GroupActivitiesResponse> {
+                groupId shouldBe GROUP_ID
+                payments shouldHaveSize 3
+                payments.map { it.paymentId } shouldContainExactly listOf(payment1.id, payment3.id, payment2.id)
+            }
+        }
+
+        should("get group activities sorted by date") {
+            // given
+            val payment1 = createPayment(id = "1", groupId = GROUP_ID, date = ofEpochMilli(2))
+            val payment2 = createPayment(id = "2", groupId = GROUP_ID, date = ofEpochMilli(3))
+            val payment3 = createPayment(id = "3", groupId = GROUP_ID, date = ofEpochMilli(1))
+
+            listOf(payment1, payment2, payment3).forEach { paymentRepository.save(it) }
+
+            // when
+            val response = service.getGroupActivitiesResponse(createGemUser(USER_ID), GROUP_ID, sortedBy = DATE)
+
+            // then
+            response shouldHaveHttpStatus OK
+            response.shouldBody<GroupActivitiesResponse> {
+                groupId shouldBe GROUP_ID
+                payments shouldHaveSize 3
+                payments.map { it.paymentId } shouldContainExactly listOf(payment3.id, payment1.id, payment2.id)
+            }
+        }
+
+        should("get group activities sorted by date ascending") {
+            // given
+            val payment1 = createPayment(id = "1", groupId = GROUP_ID, date = ofEpochMilli(2))
+            val payment2 = createPayment(id = "2", groupId = GROUP_ID, date = ofEpochMilli(3))
+            val payment3 = createPayment(id = "3", groupId = GROUP_ID, date = ofEpochMilli(1))
+
+            listOf(payment1, payment2, payment3).forEach { paymentRepository.save(it) }
+
+            // when
+            val response = service.getGroupActivitiesResponse(createGemUser(USER_ID), GROUP_ID, sortOrder = ASCENDING)
+
+            // then
+            response shouldHaveHttpStatus OK
+            response.shouldBody<GroupActivitiesResponse> {
+                groupId shouldBe GROUP_ID
+                payments shouldHaveSize 3
+                payments.map { it.paymentId } shouldContainExactly listOf(payment3.id, payment1.id, payment2.id)
+            }
+        }
+
+        should("get group activities sorted by date descending") {
+            // given
+            val payment1 = createPayment(id = "1", groupId = GROUP_ID, date = ofEpochMilli(2))
+            val payment2 = createPayment(id = "2", groupId = GROUP_ID, date = ofEpochMilli(3))
+            val payment3 = createPayment(id = "3", groupId = GROUP_ID, date = ofEpochMilli(1))
+
+            listOf(payment1, payment2, payment3).forEach { paymentRepository.save(it) }
+
+            // when
+            val response = service.getGroupActivitiesResponse(createGemUser(USER_ID), GROUP_ID, sortOrder = DESCENDING)
+
+            // then
+            response shouldHaveHttpStatus OK
+            response.shouldBody<GroupActivitiesResponse> {
+                groupId shouldBe GROUP_ID
+                payments shouldHaveSize 3
+                payments.map { it.paymentId } shouldContainExactly listOf(payment2.id, payment1.id, payment3.id)
+            }
+        }
+
+        should("get accepted group payments") {
+            // given
+            val acceptedPayment1 =
+                createPayment(
+                    id = "1",
+                    status = ACCEPTED,
+                    amount = createAmount(currency = CURRENCY_1),
+                    fxData = createFxData(targetCurrency = CURRENCY_2),
+                )
+            val acceptedPayment2 =
+                createPayment(
+                    id = "2",
+                    status = ACCEPTED,
+                    amount = createAmount(currency = CURRENCY_2),
+                    fxData = null,
+                )
+            val paymentsToSave =
+                listOf(
+                    acceptedPayment1,
+                    acceptedPayment2,
+                    createPayment(
+                        id = "3",
+                        status = ACCEPTED,
+                        amount = createAmount(currency = CURRENCY_2),
+                        fxData = createFxData(targetCurrency = CURRENCY_1),
+                    ),
+                    createPayment(
+                        id = "4",
+                        status = ACCEPTED,
+                        amount = createAmount(currency = CURRENCY_1),
+                        fxData = null,
+                    ),
+                    createPayment(
+                        id = "5",
+                        status = PENDING,
+                        amount = createAmount(currency = CURRENCY_1),
+                        fxData = createFxData(targetCurrency = CURRENCY_2),
+                    ),
+                    createPayment(
+                        id = "6",
+                        status = PENDING,
+                        amount = createAmount(currency = CURRENCY_2),
+                        fxData = null,
+                    ),
+                )
+
+            paymentsToSave.forEach { paymentRepository.save(it) }
+
+            // when
+            val response = service.getAcceptedGroupPayments(GROUP_ID, CURRENCY_2)
+
+            // then
+            response shouldHaveHttpStatus OK
+            response.shouldBody<AcceptedGroupPaymentsResponse> {
+                groupId shouldBe GROUP_ID
+                payments shouldHaveSize 2
+                payments.first().also {
+                    it.creatorId shouldBe acceptedPayment1.creatorId
+                    it.recipientId shouldBe acceptedPayment1.recipientId
+                    it.title shouldBe acceptedPayment1.title
+                    it.amount shouldBe acceptedPayment1.amount.toAmountDto()
+                    it.fxData shouldBe acceptedPayment1.fxData?.toDto()
+                    it.date shouldBe acceptedPayment1.date
+                }
+
+                payments.last().also {
+                    it.creatorId shouldBe acceptedPayment2.creatorId
+                    it.recipientId shouldBe acceptedPayment1.recipientId
+                    it.title shouldBe acceptedPayment2.title
+                    it.amount shouldBe acceptedPayment2.amount.toAmountDto()
+                    it.fxData shouldBe acceptedPayment2.fxData?.toDto()
+                    it.date shouldBe acceptedPayment2.date
+                }
+            }
+        }
+
+        should("get user balance") {
+            // given
+            val payments =
+                listOf(
+                    createPayment(
+                        id = "1",
+                        status = ACCEPTED,
+                        creatorId = USER_ID,
+                        recipientId = OTHER_USER_ID,
+                        amount =
+                            createAmount(
+                                value = 50.toBigDecimal(),
+                                currency = CURRENCY_1,
+                            ),
+                        fxData =
+                            createFxData(
+                                targetCurrency = CURRENCY_2,
+                                exchangeRate = "1.5".toBigDecimal(),
+                            ),
+                    ),
+                    createPayment(
+                        id = "2",
+                        status = ACCEPTED,
+                        creatorId = OTHER_USER_ID,
+                        recipientId = USER_ID,
+                        amount =
+                            createAmount(
+                                value = 50.toBigDecimal(),
+                                currency = CURRENCY_1,
+                            ),
+                        fxData = null,
+                    ),
+                    createPayment(
+                        id = "3",
+                        status = ACCEPTED,
+                        creatorId = OTHER_USER_ID,
+                        recipientId = ANOTHER_USER_ID,
+                    ),
+                )
+            payments.forEach { paymentRepository.save(it) }
+
+            // when
+            val response = service.getUserBalance(GROUP_ID, USER_ID)
+
+            // then
+            response shouldHaveHttpStatus OK
+            response.shouldBody<UserBalanceResponse> {
+                userId shouldBe USER_ID
+                elements.size shouldBe 2
+                elements.first().also { elem ->
+                    elem.value shouldBe payments.first().amount.value
+                    elem.currency shouldBe payments.first().fxData?.targetCurrency
+                    elem.exchangeRate shouldBe payments.first().fxData?.exchangeRate
+                }
+                elements.last().also { elem ->
+                    elem.value shouldBe payments[1].amount.value.negate()
+                    elem.currency shouldBe payments[1].amount.currency
+                    elem.exchangeRate.shouldBeNull()
+                }
+            }
+        }
+    })

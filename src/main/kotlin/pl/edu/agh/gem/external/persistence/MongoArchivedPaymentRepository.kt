@@ -4,8 +4,10 @@ import org.springframework.data.mongodb.core.MongoTemplate
 import org.springframework.stereotype.Repository
 import pl.edu.agh.gem.internal.model.payment.Payment
 import pl.edu.agh.gem.internal.persistence.ArchivedPaymentRepository
+import pl.edu.agh.gem.metrics.MeteredRepository
 
 @Repository
+@MeteredRepository
 class MongoArchivedPaymentRepository(
     private val mongo: MongoTemplate,
 ) : ArchivedPaymentRepository {

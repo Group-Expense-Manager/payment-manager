@@ -32,7 +32,11 @@ data class PaymentUpdateRequest(
     @field:NullOrNotBlank(message = ATTACHMENT_ID_NULL_OR_NOT_BLANK)
     val attachmentId: String?,
 ) {
-    fun toDomain(paymentId: String, groupId: String, userId: String) = PaymentUpdate(
+    fun toDomain(
+        paymentId: String,
+        groupId: String,
+        userId: String,
+    ) = PaymentUpdate(
         id = paymentId,
         groupId = groupId,
         userId = userId,
