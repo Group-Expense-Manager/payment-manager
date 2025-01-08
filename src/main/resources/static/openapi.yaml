@@ -1,0 +1,733 @@
+openapi: 3.0.1
+info:
+  title: Payment API
+  version: v1
+  description: API for managing payments.
+
+paths:
+  /external/payments:
+    post:
+      tags:
+        - External Group
+      summary: "Create payment"
+      description: " Create new payment"
+      operationId: "createPayment"
+      parameters:
+        - $ref: '#/components/parameters/GroupId'
+      requestBody:
+        $ref: "#/components/requestBodies/PaymentCreationRequest"
+      responses:
+        "201":
+          $ref: "#/components/responses/PaymentResponse"
+        "400":
+          $ref: '#/components/responses/ValidatorsException'
+        "403":
+          $ref: "#/components/responses/UserWithoutGroupAccessException"
+
+
+  /external/payments/{paymentId}/groups/{groupId}:
+    get:
+      tags:
+        - External Group
+      summary: "Get payment"
+      description: "Get payment"
+      operationId: "getPayment"
+      parameters:
+        - $ref: '#/components/parameters/GroupId2'
+        - $ref: '#/components/parameters/PaymentId'
+      responses:
+        "200":
+          $ref: "#/components/responses/PaymentResponse"
+        "403":
+          $ref: "#/components/responses/UserWithoutGroupAccessException"
+        "404":
+          $ref: "#/components/responses/MissingPaymentException"
+    put:
+      tags:
+        - External Group
+      summary: "Update payment"
+      description: "Update payment"
+      operationId: "updatePayment"
+      parameters:
+        - $ref: '#/components/parameters/GroupId2'
+        - $ref: '#/components/parameters/PaymentId'
+      requestBody:
+        $ref: "#/components/requestBodies/PaymentUpdateRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/PaymentResponse"
+        "400":
+          $ref: '#/components/responses/ValidatorsException'
+        "403":
+          $ref: "#/components/responses/UserWithoutGroupAccessException"
+        "404":
+          $ref: "#/components/responses/MissingPaymentException"
+    delete:
+      tags:
+        - External Group
+      summary: "Delete payment"
+      description: "Delete payment"
+      operationId: "deletePayment"
+      parameters:
+        - $ref: '#/components/parameters/GroupId2'
+        - $ref: '#/components/parameters/PaymentId'
+      responses:
+        "200":
+          description: "OK"
+        "400":
+          $ref: '#/components/responses/ValidatorsException'
+        "403":
+          $ref: "#/components/responses/UserWithoutGroupAccessException"
+        "404":
+          $ref: "#/components/responses/MissingPaymentException"
+
+  /external/payments/decide:
+    post:
+      tags:
+        - External Group
+      summary: "Add decision for payment"
+      description: "Add decision for payment"
+      operationId: "decide"
+      requestBody:
+        $ref: "#/components/requestBodies/PaymentDecisionRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/PaymentResponse"
+        "400":
+          $ref: '#/components/responses/ValidatorsException'
+        "403":
+          $ref: "#/components/responses/UserWithoutGroupAccessException"
+        "404":
+          $ref: "#/components/responses/MissingPaymentException"
+
+  /internal/payments/accepted/groups/{groupId}:
+    get:
+      tags:
+        - Internal Group
+      summary: "Get accepted payments"
+      description: "Get accepted payments"
+      operationId: "getAcceptedGroupPayments"
+      parameters:
+        - $ref: '#/components/parameters/GroupId'
+        - $ref: '#/components/parameters/Currency2'
+      responses:
+        "200":
+          $ref: "#/components/responses/AcceptedGroupPaymentsResponse"
+
+  /internal/payments/activities/groups/{groupId}:
+    get:
+      tags:
+        - Internal Group
+      summary: "Get group activities"
+      description: "Get group payments as activities with filters applied"
+      operationId: "getGroupActivities"
+      parameters:
+        - $ref: '#/components/parameters/GroupId'
+        - $ref: '#/components/parameters/Title'
+        - $ref: '#/components/parameters/Status'
+        - $ref: '#/components/parameters/CreatorId'
+        - $ref: '#/components/parameters/Currency'
+        - $ref: '#/components/parameters/SortedBy'
+        - $ref: '#/components/parameters/SortOrder'
+      responses:
+        "200":
+          $ref: "#/components/responses/GroupActivitiesResponse"
+
+
+
+
+
+components:
+  requestBodies:
+    PaymentCreationRequest:
+      description: Payment creation request
+      content:
+        application/vnd.gem.internal.v1+json:
+          schema:
+            $ref: '#/components/schemas/PaymentCreationRequest'
+          examples:
+            examplePaymentCreationRequest:
+              value:
+                title: "My new payment"
+                type: "CASH"
+                amount:
+                  value: 20.5
+                  currency: "PLN"
+                targetCurrency: "EUR"
+                date: "2023-10-26T10:00:00Z"
+                recipientId: "0ddfc155-ad49-47af-a787-af03b0be9a12"
+                message: "hello"
+                attachmentId: "94d93de-9cf2-4f00-8a48-d1c7a8ef0200"
+    PaymentUpdateRequest:
+      description: Payment update request
+      content:
+        application/vnd.gem.internal.v1+json:
+          schema:
+            $ref: '#/components/schemas/PaymentUpdateRequest'
+          examples:
+            examplePaymentUpdateRequest:
+              value:
+                title: "My new payment"
+                type: "CASH"
+                amount:
+                  value: 20.5
+                  currency: "PLN"
+                targetCurrency: "EUR"
+                date: "2023-10-26T10:00:00Z"
+                message: "hello"
+                attachmentId: "94d93de-9cf2-4f00-8a48-d1c7a8ef0200"
+
+    PaymentDecisionRequest:
+      description: Payment decision request
+      content:
+        application/vnd.gem.internal.v1+json:
+          schema:
+            $ref: '#/components/schemas/PaymentDecisionRequest'
+          examples:
+            examplePaymentDecisionRequest:
+              value:
+                paymentId: "0ddfc155-ad49-47af-a787-af03b0be9a12"
+                groupId: "53f34d91-0172-4674-af73-813a666de1a9"
+                decision: "ACCEPT"
+                message: "hi"
+
+  responses:
+    PaymentResponse:
+      description: Payment data
+      content:
+        application/vnd.gem.internal.v1+json:
+          schema:
+            $ref: '#/components/schemas/PaymentResponse'
+          examples:
+            examplePaymentResponse:
+              value:
+                paymentId: "0ddfc155-ad49-47af-a787-af03b0be9a12"
+                creatorId: "0ddfc155-ad49-47af-a787-af03b0be9a12"
+                recipientId: "0ddfc155-ad49-47af-a787-af03b0be9a12"
+                title: "My new payment"
+                type: "CASH"
+                amount:
+                  value: 20.5
+                  currency: "PLN"
+                fxData:
+                  exchangeRate: 20.5
+                  targetCurrency: "EUR"
+                date: "2023-10-26T10:00:00Z"
+                createdAt: "2023-10-26T10:00:00Z"
+                updatedAt: "2023-10-27T10:00:00Z"
+                attachmentId: "94d93de-9cf2-4f00-8a48-d1c7a8ef0200"
+                status: "ACCEPTED"
+                history:
+                  - participantId: "53f34d91-0172-4674-af73-813a666de1a9"
+                    paymentAction: "ACCEPTED"
+                    createdAt: "2023-10-26T10:00:00Z"
+                    comment: "hi"
+
+    GroupActivitiesResponse:
+      description: Group activities
+      content:
+        application/vnd.gem.internal.v1+json:
+          schema:
+            $ref: '#/components/schemas/GroupActivitiesResponse'
+          examples:
+            exampleGroupActivitiesResponse:
+              value:
+                groupId: String
+                payments:
+                  - paymentId: "0ddfc155-ad49-47af-a787-af03b0be9a12"
+                    creatorId: "0ddfc155-ad49-47af-a787-af03b0be9a12"
+                    recipientId: "0ddfc155-ad49-47af-a787-af03b0be9a12"
+                    title: "My new payment"
+                    amount:
+                      value: 20.5
+                      currency: "PLN"
+                    fxData:
+                      exchangeRate: 20.5
+                      targetCurrency: "EUR"
+                    status: "ACCEPTED"
+                    date: "2023-10-26T10:00:00Z"
+    AcceptedGroupPaymentsResponse:
+      description: Accepted group payments
+      content:
+        application/vnd.gem.internal.v1+json:
+          schema:
+            $ref: '#/components/schemas/AcceptedGroupPaymentsResponse'
+          examples:
+            exampleAcceptedGroupPaymentsResponse:
+              value:
+                groupId: String
+                payments:
+                  - creatorId: "0ddfc155-ad49-47af-a787-af03b0be9a12"
+                    recipientId: "0ddfc155-ad49-47af-a787-af03b0be9a12"
+                    title: "My new payment"
+                    amount:
+                      value: 20.5
+                      currency: "PLN"
+                    fxData:
+                      exchangeRate: 20.5
+                      targetCurrency: "EUR"
+                    date: "2023-10-26T10:00:00Z"
+
+    UserWithoutGroupAccessException:
+      description: User is not a member of the group
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SimpleErrorsHolder'
+          examples:
+            exampleUserWithoutGroupAccessException:
+              value:
+                errors:
+                  - code: "UserWithoutGroupAccessException"
+                    details: "UserWithoutGroupAccessException"
+                    message: "User with id:$userId is not a member of the group"
+                    userMessage: "User with id:$userId is not a member of the group"
+
+    ValidatorsException:
+      description: Validation failed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SimpleErrorsHolder'
+          examples:
+            exampleValidatorsException:
+              value:
+                errors:
+                  - code: "ValidatorsException"
+                    details: "ValidatorsException"
+                    message: "Failed validations: ${failedValidations}"
+                    userMessage: "Failed validations: ${failedValidations}"
+
+    MissingPaymentException:
+      description: Failed to find payment
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SimpleErrorsHolder'
+          examples:
+            exampleMissingPaymentException:
+              value:
+                errors:
+                  - code: "MissingPaymentException"
+                    details: "MissingPaymentException"
+                    message: "Failed to find payment with id: $paymentId and groupId: $groupId"
+                    userMessage: "Failed to find payment with id: $paymentId and groupId: $groupId"
+  schemas:
+    PaymentCreationRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          description: Title of the payment.
+          example: "My new payment"
+        type:
+          type: string
+          enum:
+            - "CASH"
+            - "BANK_TRANSFER"
+            - "MOBILE_PAYMENT"
+            - "OTHER"
+          description: Type of the payment.
+          example: "CASH"
+        amount:
+          $ref: '#/components/schemas/AmountDto'
+        targetCurrency:
+          type: string
+          description: Target currency of the payment.
+          example: "PLN"
+        date:
+          type: string
+          format: date-time
+          description: The date of the payment.
+          example: "2023-10-26T10:00:00Z"
+        recipientId:
+          type: string
+          description: The ID of the recipient of the payment.
+          example: "0ddfc155-ad49-47af-a787-af03b0be9a12"
+        message:
+          type: string
+          description: Message.
+          example: "Hello"
+        attachmentId:
+          type: string
+          description: The ID of the attachment.
+          example: "94d93de-9cf2-4f00-8a48-d1c7a8ef0200"
+    AmountDto:
+      type: object
+      properties:
+        value:
+          type: number
+          format: double
+          description: Value of the payment.
+          example: 50.5
+        currency:
+          type: string
+          description: Currency of the payment.
+          example: "PLN"
+    PaymentResponse:
+      type: object
+      properties:
+        paymentId:
+          type: string
+          description: The ID of the payment.
+          example: "0ddfc155-ad49-47af-a787-af03b0be9a12"
+        creatorId:
+          type: string
+          description: The ID of the creator.
+          example: "0ddfc155-ad49-47af-a787-af03b0be9a12"
+        recipientId:
+          type: string
+          description: The ID of the recipient of the payment.
+          example: "94d93de-9cf2-4f00-8a48-d1c7a8ef0200"
+        title:
+          type: string
+          description: Title of the payment.
+          example: "My new payment"
+        type:
+          type: string
+          enum:
+            - "CASH"
+            - "BANK_TRANSFER"
+            - "MOBILE_PAYMENT"
+            - "OTHER"
+          description: Type of the payment.
+          example: "CASH"
+        amount:
+          $ref: '#/components/schemas/AmountDto'
+        fxData:
+          $ref: '#/components/schemas/FxDataDto'
+        date:
+          type: string
+          format: date-time
+          description: The date of the payment.
+          example: "2023-10-26T10:00:00Z"
+        createdAt:
+          type: string
+          format: date-time
+          description: The date and time when the payment was created.
+          example: "2023-10-26T10:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: The date and time when the payment was modified.
+          example: "2023-10-26T10:00:00Z"
+        attachmentId:
+          type: string
+          description: The ID of the attachment.
+          example: "94d93de-9cf2-4f00-8a48-d1c7a8ef0200"
+        status:
+          type: string
+          enum:
+            - "ACCEPTED"
+            - "REJECTED"
+            - "PENDING"
+          description: Status of the payment.
+          example: "ACCEPTED"
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentHistoryEntryResponseData'
+    PaymentHistoryEntryResponseData:
+      type: object
+      properties:
+        participantId:
+          type: string
+          description: The ID of the payment participant.
+          example: "0ddfc155-ad49-47af-a787-af03b0be9a12"
+        paymentAction:
+          type: string
+          enum:
+            - "ACCEPTED"
+            - "REJECTED"
+            - "CREATED"
+            - "EDITED"
+            - "DELETED"
+          description: Action of payment participant
+          example: "ACCEPTED"
+        createdAt:
+          type: string
+          format: date-time
+          description: The date and time when the action was performed.
+          example: "2023-10-26T10:00:00Z"
+        comment:
+          type: string
+          description: Comment.
+          example: "Hello"
+    FxDataDto:
+      type: object
+      properties:
+        exchangeRate:
+          type: number
+          format: double
+          description: The exchange rate.
+          example: 0.82
+        targetCurrency:
+          type: string
+          description: Target currency of the payment.
+          example: "PLN"
+    PaymentUpdateRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          description: Title of the payment.
+          example: "My new payment"
+        type:
+          type: string
+          enum:
+            - "CASH"
+            - "BANK_TRANSFER"
+            - "MOBILE_PAYMENT"
+            - "OTHER"
+          description: Type of the payment.
+          example: "CASH"
+        amount:
+          $ref: '#/components/schemas/AmountDto'
+        targetCurrency:
+          type: string
+          description: Target currency of the payment.
+          example: "PLN"
+        date:
+          type: string
+          format: date-time
+          description: The date of the payment.
+          example: "2023-10-26T10:00:00Z"
+        message:
+          type: string
+          description: Message.
+          example: "Hello"
+        attachmentId:
+          type: string
+          description: The ID of the attachment.
+          example: "94d93de-9cf2-4f00-8a48-d1c7a8ef0200"
+    PaymentDecisionRequest:
+      type: object
+      properties:
+        paymentId:
+          type: string
+          description: The ID of the payment.
+          example: "0ddfc155-ad49-47af-a787-af03b0be9a12"
+        groupId:
+          type: string
+          description: The ID of the group.
+          example: "53f34d91-0172-4674-af73-813a666de1a9"
+        decision:
+          type: string
+          enum:
+            - "ACCEPT"
+            - "REJECT"
+          description: Payment decision.
+          example: "ACCEPT"
+        message:
+          type: string
+          description: Message.
+          example: "Hello"
+    AcceptedGroupPaymentsResponse:
+      type: object
+      properties:
+        groupId:
+          type: string
+          description: The ID of the group.
+          example: "53f34d91-0172-4674-af73-813a666de1a9"
+        payments:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcceptedGroupPaymentDto'
+    AcceptedGroupPaymentDto:
+      type: object
+      properties:
+        creatorId:
+          type: string
+          description: The ID of the creator.
+          example: "0ddfc155-ad49-47af-a787-af03b0be9a12"
+        recipientId:
+          type: string
+          description: The ID of the recipient of the payment.
+          example: "0ddfc155-ad49-47af-a787-af03b0be9a12"
+        title:
+          type: string
+          description: Title of the payment.
+          example: "My new payment"
+        amount:
+          $ref: '#/components/schemas/AmountDto'
+        fxData:
+          $ref: '#/components/schemas/FxDataDto'
+        date:
+          type: string
+          format: date-time
+          description: The date of the payment.
+          example: "2023-10-26T10:00:00Z"
+    GroupActivitiesResponse:
+      type: object
+      properties:
+        groupId:
+          type: string
+          description: The ID of the group.
+          example: "53f34d91-0172-4674-af73-813a666de1a9"
+        payments:
+          type: array
+          items:
+            $ref: '#/components/schemas/GroupActivityDTO'
+    GroupActivityDTO:
+      type: object
+      properties:
+        paymentId:
+          type: string
+          description: The ID of the payment.
+          example: "0ddfc155-ad49-47af-a787-af03b0be9a12"
+        creatorId:
+          type: string
+          description: The ID of the creator.
+          example: "0ddfc155-ad49-47af-a787-af03b0be9a12"
+        recipientId:
+          type: string
+          description: The ID of the recipient of the payment.
+          example: "0ddfc155-ad49-47af-a787-af03b0be9a12"
+        title:
+          type: string
+          description: Title of the payment.
+          example: "My new payment"
+        amount:
+          $ref: '#/components/schemas/AmountDto'
+        fxData:
+          $ref: '#/components/schemas/FxDataDto'
+        status:
+          type: string
+          enum:
+            - "ACCEPTED"
+            - "REJECTED"
+            - "PENDING"
+          description: Status of the payment.
+          example: "ACCEPTED"
+        date:
+          type: string
+          format: date-time
+          description: The date of the payment.
+          example: "2023-10-26T10:00:00Z"
+
+    SimpleErrorsHolder:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                type: string
+                nullable: true
+                description: Error code.
+                example: "INVALID_VALUE"
+              message:
+                type: string
+                nullable: true
+                description: Error message.
+                example: "The provided value is invalid."
+              details:
+                type: string
+                nullable: true
+                description: Additional error details.
+                example: "The field 'email' must contain a valid email address."
+              path:
+                type: string
+                nullable: true
+                description: The API path related to the error.
+                example: "/external/payments"
+              userMessage:
+                type: string
+                nullable: true
+                description: A user-friendly error message.
+                example: "Please provide a valid email address."
+
+
+  parameters:
+    GroupId:
+      name: groupId
+      in: query
+      required: true
+      schema:
+        type: string
+        example: "53f34d91-0172-4674-af73-813a666de1a9"
+      description: The ID of the group.
+    GroupId2:
+      name: groupId
+      in: path
+      required: true
+      schema:
+        type: string
+        example: "53f34d91-0172-4674-af73-813a666de1a9"
+      description: The ID of the group.
+    PaymentId:
+      name: paymentId
+      in: path
+      required: true
+      schema:
+        type: string
+        example: "53f34d91-0172-4674-af73-813a666de1a9"
+      description: The ID of the payment.
+    Title:
+      name: title
+      in: query
+      required: false
+      schema:
+        type: string
+        example: "Burger"
+      description: Activity title filter.
+    Status:
+      name: status
+      in: query
+      required: false
+      schema:
+        type: string
+        enum:
+          - "ACCEPTED"
+          - "REJECTED"
+          - "PENDING"
+        example: "ACCEPTED"
+      description: Activity status filter.
+    CreatorId:
+      name: creatorId
+      in: query
+      required: false
+      schema:
+        type: string
+        example: "0ddfc155-ad49-47af-a787-af03b0be9a12"
+      description: The ID of the payment creator.
+    Currency:
+      name: currency
+      in: query
+      required: false
+      schema:
+        type: string
+        example: "PLN"
+      description: Currency filter.
+    Currency2:
+      name: currency
+      in: query
+      required: false
+      schema:
+        type: string
+        example: "PLN"
+      description: Currency filter.
+    SortedBy:
+      name: sortedBy
+      in: query
+      required: false
+      schema:
+        type: string
+        enum:
+          - "TITLE"
+          - "DATE"
+        example: "TITLE"
+      description: By which field activities are sorted.
+    SortOrder:
+      name: sortOrder
+      in: query
+      required: false
+      schema:
+        type: string
+        enum:
+          - "ASCENDING"
+          - "DESCENDING"
+        example: "ASCENDING"
+      description: Order of sorting.

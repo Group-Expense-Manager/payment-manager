@@ -6,7 +6,6 @@ import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.datatest.withData
 import io.kotest.matchers.collections.shouldContainAll
 import io.kotest.matchers.collections.shouldHaveSize
-import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import org.mockito.kotlin.anyVararg
@@ -553,64 +552,6 @@ class PaymentServiceTest : ShouldSpec({
             it shouldHaveSize 2
             it.first() shouldBe acceptedPayment1
             it.last() shouldBe acceptedPayment2
-        }
-        verify(paymentRepository, times(1)).findByGroupId(GROUP_ID)
-    }
-
-    should("get user balance") {
-        // given
-        val payments =
-            listOf(
-                createPayment(
-                    status = ACCEPTED,
-                    creatorId = USER_ID,
-                    recipientId = OTHER_USER_ID,
-                    amount =
-                        createAmount(
-                            value = 50.toBigDecimal(),
-                            currency = CURRENCY_1,
-                        ),
-                    fxData =
-                        createFxData(
-                            targetCurrency = CURRENCY_2,
-                            exchangeRate = "1.5".toBigDecimal(),
-                        ),
-                ),
-                createPayment(
-                    status = ACCEPTED,
-                    creatorId = OTHER_USER_ID,
-                    recipientId = USER_ID,
-                    amount =
-                        createAmount(
-                            value = 50.toBigDecimal(),
-                            currency = CURRENCY_1,
-                        ),
-                    fxData = null,
-                ),
-                createPayment(
-                    status = ACCEPTED,
-                    creatorId = OTHER_USER_ID,
-                    recipientId = ANOTHER_USER_ID,
-                ),
-            )
-        whenever(paymentRepository.findByGroupId(GROUP_ID)).thenReturn(payments)
-
-        // when
-        val result = paymentService.getUserBalance(GROUP_ID, USER_ID)
-
-        // then
-        result.also {
-            it shouldHaveSize 2
-            it.first().also { elem ->
-                elem.value shouldBe payments.first().amount.value
-                elem.currency shouldBe payments.first().fxData?.targetCurrency
-                elem.exchangeRate shouldBe payments.first().fxData?.exchangeRate
-            }
-            it.last().also { elem ->
-                elem.value shouldBe payments[1].amount.value.negate()
-                elem.currency shouldBe payments[1].amount.currency
-                elem.exchangeRate.shouldBeNull()
-            }
         }
         verify(paymentRepository, times(1)).findByGroupId(GROUP_ID)
     }
