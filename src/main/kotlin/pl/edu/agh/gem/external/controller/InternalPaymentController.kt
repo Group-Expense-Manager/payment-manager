@@ -9,10 +9,8 @@ import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import pl.edu.agh.gem.external.dto.payment.AcceptedGroupPaymentsResponse
 import pl.edu.agh.gem.external.dto.payment.GroupActivitiesResponse
-import pl.edu.agh.gem.external.dto.payment.UserBalanceResponse
 import pl.edu.agh.gem.external.dto.payment.toAcceptedGroupPaymentsResponse
 import pl.edu.agh.gem.external.dto.payment.toGroupActivitiesResponse
-import pl.edu.agh.gem.external.dto.payment.toUserBalanceResponse
 import pl.edu.agh.gem.internal.model.payment.PaymentStatus
 import pl.edu.agh.gem.internal.model.payment.filter.FilterOptions
 import pl.edu.agh.gem.internal.model.payment.filter.SortOrder
@@ -49,14 +47,5 @@ class InternalPaymentController(
         @RequestParam currency: String,
     ): AcceptedGroupPaymentsResponse {
         return paymentService.getAcceptedGroupPayments(groupId, currency).toAcceptedGroupPaymentsResponse(groupId)
-    }
-
-    @GetMapping("balance/groups/{groupId}/users/{userId}", produces = [APPLICATION_JSON_INTERNAL_VER_1])
-    @ResponseStatus(OK)
-    fun getUserPaymentBalance(
-        @PathVariable groupId: String,
-        @PathVariable userId: String,
-    ): UserBalanceResponse {
-        return paymentService.getUserBalance(groupId, userId).toUserBalanceResponse(userId)
     }
 }
